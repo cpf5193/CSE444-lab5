@@ -1,0 +1,47 @@
+Christon Fukuhara
+1126856
+cpf5193@cs.washington.edu
+lab2: answers.txt
+
+2.1: 
+Join:
+     -I implemented join using a basic nested loop. This was done in getNext().
+2.2:
+IntegerAggregator: 
+     -An IntegerAggregator uses two maps to keep track of the accumulated value
+      and the number of tuples read for each unique groupby value. Operators 
+      that have a group-by value of NO_GROUPING are represented by maps with 
+      a single null key.
+     -The aggregator's tupleDesc is set with specific column names the first 
+      time a tuple is merged into the aggregator. Otherwise, if the iterator is 
+      called and the aggregator does not yet have any tuples, 
+      iterator().getTupleDesc() will return a TupleDesc with generic column 
+      names "groupValue" and "aggregateValue"
+     
+StringAggregator:
+      -A StringAggregator uses a map from group-by fields to number of tuples
+       processed. Similarly to IntegerAggregator, operators with no grouping 
+       have a single null hash key.
+      -The tupleDesc of a StringAggregator has the same rules as an 
+       IntegerAggregator
+BufferPool:
+	-evictPage() is implemented with a least-recently-used policy, using an
+	 ArrayList to keep track of the pages in the buffer. On getPage, the 
+	 BufferPool will either move the affected page to the front of the LRU
+	 list or add the new page to the front of the list. If a page needs to
+	 be evicted, the last page in the list will be deleted, and the new page
+	 will be added to the front.
+     
+2. No changes to API
+
+3. Behavior is undefined if Op is not MIN, MAX, SUM, AVG, or COUNT
+
+4. I spent about 25 hours on this assignment.
+   Difficult/Confusing Sections:
+   -Did not realize for a long time that IntegerAggregator should still be able
+    to be grouped by a String attribute.
+   -Figuring out how to implement the Join iterator so that all the components 
+    were open and the children aggregators would not reset at the wrong times 
+   -Bit manipulation to set a dirty or clean bit -- I spent about 4 hours trying
+    to figure out the mask until I realized I could use XOR. this was the most 
+    difficult part of the lab for me.
