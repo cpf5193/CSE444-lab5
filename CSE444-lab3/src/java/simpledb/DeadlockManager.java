@@ -27,7 +27,7 @@ public class DeadlockManager {
 	 */
 	public synchronized boolean addToGraph(TransactionId tid1, TransactionId tid2) 
 			throws TransactionAbortedException {
-		System.out.println("Trying to addToGraph: " + waitsForGraph);
+		System.out.println("Trying to add dependency " + tid1 + "->" + tid2 + " to " + waitsForGraph);
 		// don't allow an edge to be added twice or to itself
 		if (tid1.equals(tid2) || (waitsForGraph.containsKey(tid1) && 
 				waitsForGraph.get(tid1).equals(tid2))) {
@@ -37,7 +37,7 @@ public class DeadlockManager {
 			System.out.println("Aborting: " + tid1);
 			return false;
 		} else {
-			System.out.println("trying to add to graph: tid1=" + tid1 + ", tid2=" + tid2 + "\n");
+			System.out.println("Adding dependency to graph: tid1=" + tid1 + ", tid2=" + tid2 + "\n");
 			// Legal to add this dependency
 			if(waitsForGraph.containsKey(tid1)) {
 				ArrayList<TransactionId> dependsOnList = waitsForGraph.get(tid1);
@@ -101,7 +101,6 @@ public class DeadlockManager {
 	/* Abstracts away the confusing parameters in opposite order, 
 	 * depthFirstSearch does the work*/
 	private synchronized boolean wouldHaveCycle(TransactionId tid1, TransactionId tid2) {
-		System.out.println("Passed to wouldHaveCycle: tid1: " + tid1 + "\ntid2: " + tid2 + "\n");
 		return depthFirstSearch(tid2, tid1);
 	}
 	
@@ -113,7 +112,7 @@ public class DeadlockManager {
 		ArrayList<TransactionId> visitedtids = new ArrayList<TransactionId>();
 		q.add(tid1);
 		visitedtids.add(tid1);
-		System.out.println("\nInput: \ntid1: " + tid1 + "\ntid2: " + tid2);
+		System.out.println("\nInput to depthFirstSearch: \ntid1: " + tid1 + "\ntid2: " + tid2);
 		System.out.println("contents of waitsForGraph: " + waitsForGraph + "\n");
 		while(!q.isEmpty()) {
 			TransactionId tid = q.remove();

@@ -75,7 +75,7 @@ public class BufferPool {
      */
     public Page getPage(TransactionId tid, PageId pid, Permissions perm)
         throws TransactionAbortedException, DbException {
-    	System.out.println("Requesting lock: " + perm);
+    	System.out.println(tid + " Requesting lock: " + perm);
     	lockManager.requestLock(tid, pid, perm);
         if(pageMap.containsKey(pid.hashCode())){  //access a page in the BufferPool
         	Page page = pageMap.get(pid.hashCode());
@@ -210,7 +210,14 @@ public class BufferPool {
 //    		}
     	}
     	// Release all locks that this transaction holds
+		System.out.println("\nbpdependencies: " + lockManager.dependencies.toString());
+		System.out.println("bpExclusive Locks: " + lockManager.exclusiveLocks);
+		System.out.println("bpShared Locks: " + lockManager.sharedLocks);
 		lockManager.releaseAllLocksForTxn(tid);
+		System.out.println("\nAfter abort: ");
+		System.out.println("bpdependencies: " + lockManager.dependencies.toString());
+		System.out.println("bpExclusive Locks: " + lockManager.exclusiveLocks);
+		System.out.println("bpShared Locks: " + lockManager.sharedLocks + "\n");
     }
 
     /**
@@ -252,7 +259,9 @@ public class BufferPool {
         throws DbException, IOException, TransactionAbortedException {
     	int tableId = t.getRecordId().getPageId().getTableId();
     	DbFile file = Database.getCatalog().getDatabaseFile(tableId);
+    	System.out.println("++++++++++++++++++++++++++++++++++++++");
     	ArrayList<Page> pages = file.deleteTuple(tid, t);
+    	System.out.println("**************************************");
     	for(Page p : pages){
     		p.markDirty(true, tid);
     	}

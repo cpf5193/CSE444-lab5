@@ -17,7 +17,7 @@ public class LockManager {
 	DeadlockManager dependencies;
 	
 	// Determines whether we deal with deadlocks using a dependency graph or timeouts
-	boolean DEPENDENCIES = false;
+	boolean DEPENDENCIES = true;
 	
 	// Constructor
 	public LockManager(int maxPages) {
@@ -180,8 +180,10 @@ public class LockManager {
 			PageId pid, Permissions perm) throws TransactionAbortedException {
 		if(perm == Permissions.READ_ONLY){
 			getSharedLock(tid, pid);
+			System.out.println("Done requesting read lock for " + tid);
 		} else {
 			getExclusiveLock(tid, pid);
+			System.out.println("Done requesting write lock for " + tid);
 		}
 	}
 
@@ -269,7 +271,7 @@ public class LockManager {
 			addToSharedLocks(tid, pid);
 			
 			// We have completed our request, can remove this transaction from the dependencies
-			dependencies.removeAllDependenciesTo(tid);
+//			dependencies.removeAllDependenciesTo(tid);
 			
 			// REMOVE AND REPLACE THIS CALL ^
 		}
@@ -319,16 +321,10 @@ public class LockManager {
 			addToExclusiveLocks(tid, pid);
 		} else {
 			// there is an exclusive lock blocking the request
-			System.out.println("Adding to graph: tid=" + tid + ", blockers="+blockers);
 			// tries to add dependency to graph, aborts if there would be a deadlock
 			if(!dependencies.addToGraph(tid, blockers.get(0))){
-//				System.out.println("dependencies: " + dependencies.toString());
-//				System.out.println("Exclusive Locks: " + exclusiveLocks);
-//				System.out.println("Shared Locks: " + sharedLocks);
+
 //				dependencies.removeAllDependenciesTo(tid);
-//				System.out.println("dependencies: " + dependencies.toString());
-//				System.out.println("Exclusive Locks: " + exclusiveLocks);
-//				System.out.println("Shared Locks: " + sharedLocks);
 				throw new TransactionAbortedException();
 			}
 			
@@ -340,14 +336,14 @@ public class LockManager {
 					e.printStackTrace();
 				}
 			}
-			System.out.println("cleared dependency list for transaction " + tid);
+			System.out.println("cleared dependency list so transaction " + tid + " can execute");
 			// The dependency list is now empty, we can execute now
 			addToExclusiveLocks(tid, pid);
 //			System.out.println("dependencies: " + dependencies.toString());
 //			System.out.println("Exclusive Locks: " + exclusiveLocks);
 //			System.out.println("Shared Locks: " + sharedLocks);
 			// We have completed our request, can remove this transaction from the dependencies
-			dependencies.removeAllDependenciesTo(tid);
+//			dependencies.removeAllDependenciesTo(tid);
 		}
 	}
 	

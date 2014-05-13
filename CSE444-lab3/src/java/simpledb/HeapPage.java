@@ -243,14 +243,20 @@ public class HeapPage implements Page {
      * @param t The tuple to delete
      */
     public void deleteTuple(Tuple t) throws DbException {
+    	System.out.println("Entered deleteTuple");
         if(!isSlotUsed(t.getRecordId().tupleno())){
         	throw new DbException("The slot for tuple " + t + " is already empty");
         }
     	List<Tuple> tupleList = Arrays.asList(tuples);
     	if(!tupleList.contains(t)){
+    		System.out.println("in tupleList.get(0): " + tupleList.get(0));
+    		System.out.println("t: " + t);
+    		System.out.println("super dumb");
     		throw new DbException("Tuple " + t + " does not exist on this page");
     	}
+    	System.out.println("tuples.length in HeapPage: " + tuples.length);
     	for(int i=0; i<tuples.length; i++){
+    		System.out.println("Looping in HeapPage.java");
     		if(t.equals(tuples[i])){  // tuple found, remove from list
     			tuples[i] = null;
     			markSlotUsed(i, false);
