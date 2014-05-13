@@ -248,6 +248,9 @@ public class HeapPage implements Page {
         	throw new DbException("The slot for tuple " + t + " is already empty");
         }
     	List<Tuple> tupleList = Arrays.asList(tuples);
+    	System.out.println("tupleList: " + tupleList);
+    	System.out.println("looking for t: " +t );
+    	System.out.println("tupleList equals: " + (tupleList.get(0) == t));
     	if(!tupleList.contains(t)){
     		System.out.println("in tupleList.get(0): " + tupleList.get(0));
     		System.out.println("t: " + t);
