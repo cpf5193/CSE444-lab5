@@ -1,0 +1,36 @@
+Christon Fukuhara
+1126856
+cpf5193@cs.washington.edu
+lab3: answers.txt
+
+
+Locking Granularity:
+	-I decided to use page-level granularity in my implementation.
+	
+	-For my implementation of locking, I implemented an extra class named LockManager in order to keep track of the state
+	of the dependency graph, the shared locks, and the exclusive locks. The lock manager is maintained from the BufferPool.
+
+Deadlock Detection:
+	-I implemented both a simple timeout policy and a dependency graph implementation of deadlock detection.
+	I used a constant DEPENDENCIES at the top of my LockManager class to quickly switch back and forth between
+	the use of dependency graph and timeout policies.
+	
+	-For my dependency graph, I created two additional classes, DeadlockManager and TransPagePerm. TransPagePerm represents
+	a triple of the form <TransactionId, PageId, Permission>. The purpose of this was to be able to build dependencies
+	between specific locks that transactions were waiting for. In my DeadlockManager, I used a hashtable from TransPagePerm's
+	to a list of TransPagePerm's, to indicate directed edges for dependencies. Upon a request of adding a dependency to the 
+	waits-for graph, the DeadlockManager uses a depth-first-search to figure out if there is a path in the opposite direction,
+	and if so, a cycle would occur, thus causing the requesting transaction to abort. If it is safe to add to the dependency 
+	graph, it will use a sleep loop until the entries in the hashtable are gone, then execute and remove itself from the graph.
+
+Deadlock Resolution:
+	-As described above, a transaction will abort itself if it detects that it will create a cycle upon adding to the dependency graph.
+	
+Bonus Exercise 6:
+	-For the bonus exercise, I implemented both timeouts and the dependency graph to take care of deadlock detection.
+	Using timeouts is simple and easy to implement, but inefficient as it will have to wait until the timeout to determine that there
+	is a deadlock, and must be set for longer depending on how long the execution of the queries is expected to take. A dependency
+	graph, in contrast, is much harder to implement and takes extra overhead at each insert into the dependency graph to determine
+	whether there is a deadlock. However, we are guaranteed that a deadlock will never occur, and a transaction will abort before
+	it can create a deadlock. It will also avoid unnecessary aborts for deadlocks that don't exist, and provides more flexibility
+	to the runtime of queries.
