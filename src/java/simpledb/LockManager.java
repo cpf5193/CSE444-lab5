@@ -107,7 +107,9 @@ public class LockManager {
 				exclusiveLocks.remove(key);
 			}
 		}
+		System.out.println("State:\nsharedLocks: " + sharedLocks + "\nexclusiveLocks" + exclusiveLocks + "\ndependencies: " + dependencies.toString());
 		dependencies.removeAllDependenciesTo(tid);
+		System.out.println("State:\nsharedLocks: " + sharedLocks + "\nexclusiveLocks" + exclusiveLocks + "\ndependencies: " + dependencies.toString());
 	}
 	
 	// Returns an ArrayList of all PageId's of pages locked by transaction tid
@@ -245,17 +247,22 @@ public class LockManager {
 		} else {
 			// there is an exclusive lock blocking the request
 //			TransPagePerm requestingTpp = new TransPagePerm(tid, pid, Permissions.READ_ONLY);
-			
+			System.out.println("blockers.size() " + blockers.size() + "........................................");
+			for(int i=0; i<blockers.size(); i++){
 			// tries to add dependency to graph, aborts if there would be a deadlock
-			if(!dependencies.addToGraph(tid, blockers.get(0))) {
-//				System.out.println("sdependencies: " + dependencies.toString());
-//				System.out.println("sExclusive Locks: " + exclusiveLocks);
-//				System.out.println("sShared Locks: " + sharedLocks);
-//				dependencies.removeAllDependenciesTo(tid);
-//				System.out.println("sdependencies: " + dependencies.toString());
-//				System.out.println("sExclusive Locks: " + exclusiveLocks);
-//				System.out.println("sShared Locks: " + sharedLocks);
-				throw new TransactionAbortedException();
+				if(!dependencies.addToGraph(tid, blockers.get(i))) {
+	//				System.out.println("sdependencies: " + dependencies.toString());
+	//				System.out.println("sExclusive Locks: " + exclusiveLocks);
+	//				System.out.println("sShared Locks: " + sharedLocks);
+	//				dependencies.removeAllDependenciesTo(tid);
+	//				System.out.println("sdependencies: " + dependencies.toString());
+	//				System.out.println("sExclusive Locks: " + exclusiveLocks);
+	//				System.out.println("sShared Locks: " + sharedLocks);
+					throw new TransactionAbortedException();
+				}
+				System.out.println("After adding dependency {" + tid + ", " + blockers.get(i) + "}");
+				System.out.println("sharedLocks: " + sharedLocks + "\nexclusiveLocks: " + exclusiveLocks + "dependencies: " + dependencies.toString());
+
 			}
 			
 			// Use a sleep statement until our entry in dependencies is empty
@@ -322,11 +329,16 @@ public class LockManager {
 		} else {
 			// there is an exclusive lock blocking the request
 			// tries to add dependency to graph, aborts if there would be a deadlock
-			if(!dependencies.addToGraph(tid, blockers.get(0))){
+			System.out.println("blockers.size() " + blockers.size() + "........................................");
 
-//				dependencies.removeAllDependenciesTo(tid);
-				throw new TransactionAbortedException();
-			}
+			for(int i=0; i<blockers.size(); i++) {
+				System.out.println("blocker number " + i);
+				if(!dependencies.addToGraph(tid, blockers.get(i))){
+					throw new TransactionAbortedException();
+				}
+				System.out.println("After adding dependency {" + tid + ", " + blockers.get(i) + "}");
+				System.out.println("sharedLocks: " + sharedLocks + "\nexclusiveLocks: " + exclusiveLocks + "dependencies: " + dependencies.toString());
+			}		
 			
 			// Use a sleep statement until our entry in dependencies is empty
 			while(dependencies.hasDependencies(tid)){

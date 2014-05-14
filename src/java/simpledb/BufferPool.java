@@ -214,7 +214,7 @@ public class BufferPool {
 		System.out.println("bpExclusive Locks: " + lockManager.exclusiveLocks);
 		System.out.println("bpShared Locks: " + lockManager.sharedLocks);
 		lockManager.releaseAllLocksForTxn(tid);
-		System.out.println("\nAfter removing locks and dependencies: ");
+		System.out.println("\nAfter removing locks and dependencies for tid = " + tid + ": ");
 		System.out.println("bpdependencies: " + lockManager.dependencies.toString());
 		System.out.println("bpExclusive Locks: " + lockManager.exclusiveLocks);
 		System.out.println("bpShared Locks: " + lockManager.sharedLocks + "\n");

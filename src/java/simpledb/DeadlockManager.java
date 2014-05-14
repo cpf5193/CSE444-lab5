@@ -41,7 +41,8 @@ public class DeadlockManager {
 			// Legal to add this dependency
 			if(waitsForGraph.containsKey(tid1)) {
 				ArrayList<TransactionId> dependsOnList = waitsForGraph.get(tid1);
-				dependsOnList.add(tid2);
+				if(!dependsOnList.contains(tid2))
+					dependsOnList.add(tid2);
 				waitsForGraph.put(tid1, dependsOnList);
 			} else {
 				waitsForGraph.put(tid1, new ArrayList<TransactionId>(Arrays.asList(tid2)));
@@ -88,6 +89,7 @@ public class DeadlockManager {
 				waitsForGraph.put(tid, dependsOnList);
 			}
 		}
+		System.out.println("End of removeAllDependenciesTo");
 	}
 	
 	
