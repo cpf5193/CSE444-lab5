@@ -133,9 +133,9 @@ public class HeapFile implements DbFile {
             TransactionAbortedException {
     	 HeapPage page = (HeapPage) Database.getBufferPool()
 		 	.getPage(tid, t.getRecordId().getPageId(), Permissions.READ_WRITE);
-    	 System.out.println("Got the page in HeapFile: " + page);
+//    	 System.out.println("Got the page in HeapFile: " + page);
          page.deleteTuple(t);
-         System.out.println("Was able to delete the tuple from the page");
+//       System.out.println("Was able to delete the tuple from the page");
          ArrayList<Page> pageList = new ArrayList<Page>();
          pageList.add(page);
          return pageList;

@@ -214,7 +214,7 @@ public class BufferPool {
 		System.out.println("bpExclusive Locks: " + lockManager.exclusiveLocks);
 		System.out.println("bpShared Locks: " + lockManager.sharedLocks);
 		lockManager.releaseAllLocksForTxn(tid);
-		System.out.println("\nAfter abort: ");
+		System.out.println("\nAfter removing locks and dependencies: ");
 		System.out.println("bpdependencies: " + lockManager.dependencies.toString());
 		System.out.println("bpExclusive Locks: " + lockManager.exclusiveLocks);
 		System.out.println("bpShared Locks: " + lockManager.sharedLocks + "\n");
@@ -259,9 +259,7 @@ public class BufferPool {
         throws DbException, IOException, TransactionAbortedException {
     	int tableId = t.getRecordId().getPageId().getTableId();
     	DbFile file = Database.getCatalog().getDatabaseFile(tableId);
-    	System.out.println("++++++++++++++++++++++++++++++++++++++");
     	ArrayList<Page> pages = file.deleteTuple(tid, t);
-    	System.out.println("**************************************");
     	for(Page p : pages){
     		p.markDirty(true, tid);
     	}
