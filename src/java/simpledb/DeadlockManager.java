@@ -3,8 +3,10 @@ package simpledb;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Queue;
+import java.util.Set;
 
 
 public class DeadlockManager {
@@ -76,10 +78,16 @@ public class DeadlockManager {
 	 */
 	/* When we commit or abort a transaction, we will want to remove all dependencies from 
 	 * transaction tid1 to desttid */
-	public void removeAllDependenciesTo(TransactionId desttid) {
-		for(TransactionId tid : waitsForGraph.keySet()) {
-			ArrayList<TransactionId> dependsOnList = waitsForGraph.get(tid);
-			if(dependsOnList.contains(desttid)) {
+	public synchronized void removeAllDependenciesTo(TransactionId desttid) {
+		// Make copy of keySet to avoid ConcurrentModificationException
+		Set<TransactionId> keySetCopy = new HashSet<TransactionId>();
+		keySetCopy.addAll(waitsForGraph.keySet());
+		for(TransactionId tid : keySetCopy) {
+			ArrayList<TransactionId> dependsOnList = new ArrayList<TransactionId>();
+			dependsOnList.addAll(waitsForGraph.get(tid));
+			//waitsForGraph.get(tid);
+			
+			if(waitsForGraph.get(tid).contains(desttid)) {
 				dependsOnList.remove(desttid);
 			}
 			if(dependsOnList.size() == 0) {
@@ -88,6 +96,9 @@ public class DeadlockManager {
 			else {
 				waitsForGraph.put(tid, dependsOnList);
 			}
+		}
+		if(waitsForGraph.containsKey(desttid)) {
+			waitsForGraph.remove(desttid);
 		}
 		System.out.println("End of removeAllDependenciesTo");
 	}

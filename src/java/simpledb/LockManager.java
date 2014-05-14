@@ -261,7 +261,7 @@ public class LockManager {
 					throw new TransactionAbortedException();
 				}
 				System.out.println("After adding dependency {" + tid + ", " + blockers.get(i) + "}");
-				System.out.println("sharedLocks: " + sharedLocks + "\nexclusiveLocks: " + exclusiveLocks + "dependencies: " + dependencies.toString());
+				System.out.println("sharedLocks: " + sharedLocks + "\nexclusiveLocks: " + exclusiveLocks + "\ndependencies: " + dependencies.toString());
 
 			}
 			
@@ -337,11 +337,12 @@ public class LockManager {
 					throw new TransactionAbortedException();
 				}
 				System.out.println("After adding dependency {" + tid + ", " + blockers.get(i) + "}");
-				System.out.println("sharedLocks: " + sharedLocks + "\nexclusiveLocks: " + exclusiveLocks + "dependencies: " + dependencies.toString());
+				System.out.println("sharedLocks: " + sharedLocks + "\nexclusiveLocks: " + exclusiveLocks + "\ndependencies: " + dependencies.toString());
 			}		
 			
 			// Use a sleep statement until our entry in dependencies is empty
 			while(dependencies.hasDependencies(tid)){
+					System.out.println("sleeping for " + tid);
 				try {
 					Thread.sleep(10);
 				} catch (InterruptedException e) {
@@ -351,6 +352,7 @@ public class LockManager {
 			System.out.println("cleared dependency list so transaction " + tid + " can execute");
 			// The dependency list is now empty, we can execute now
 			addToExclusiveLocks(tid, pid);
+			System.out.println("Added exclusive lock for " + tid);
 //			System.out.println("dependencies: " + dependencies.toString());
 //			System.out.println("Exclusive Locks: " + exclusiveLocks);
 //			System.out.println("Shared Locks: " + sharedLocks);
