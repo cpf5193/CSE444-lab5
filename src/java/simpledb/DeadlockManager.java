@@ -125,8 +125,8 @@ public class DeadlockManager {
 		ArrayList<TransactionId> visitedtids = new ArrayList<TransactionId>();
 		q.add(tid1);
 		visitedtids.add(tid1);
-		System.out.println("\nInput to depthFirstSearch: \ntid1: " + tid1 + "\ntid2: " + tid2);
-		System.out.println("contents of waitsForGraph: " + waitsForGraph + "\n");
+//		System.out.println("\nInput to depthFirstSearch: \ntid1: " + tid1 + "\ntid2: " + tid2);
+//		System.out.println("contents of waitsForGraph: " + waitsForGraph + "\n");
 		while(!q.isEmpty()) {
 			TransactionId tid = q.remove();
 			if(tid.equals(tid2)) {

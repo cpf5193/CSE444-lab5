@@ -107,9 +107,9 @@ public class LockManager {
 				exclusiveLocks.remove(key);
 			}
 		}
-		System.out.println("State:\nsharedLocks: " + sharedLocks + "\nexclusiveLocks" + exclusiveLocks + "\ndependencies: " + dependencies.toString());
+		System.out.println("State:\nsharedLocks: " + sharedLocks + "\ndependencies: " + dependencies.toString());
 		dependencies.removeAllDependenciesTo(tid);
-		System.out.println("State:\nsharedLocks: " + sharedLocks + "\nexclusiveLocks" + exclusiveLocks + "\ndependencies: " + dependencies.toString());
+		System.out.println("State:\nsharedLocks: " + sharedLocks + "\ndependencies: " + dependencies.toString());
 	}
 	
 	// Returns an ArrayList of all PageId's of pages locked by transaction tid
@@ -261,7 +261,7 @@ public class LockManager {
 					throw new TransactionAbortedException();
 				}
 				System.out.println("After adding dependency {" + tid + ", " + blockers.get(i) + "}");
-				System.out.println("sharedLocks: " + sharedLocks + "\nexclusiveLocks: " + exclusiveLocks + "\ndependencies: " + dependencies.toString());
+				System.out.println("sharedLocks: " + sharedLocks + "\ndependencies: " + dependencies.toString());
 
 			}
 			
@@ -322,7 +322,7 @@ public class LockManager {
 	// Gets an exclusive lock, dealing with deadlocks using a dependency graph
 	private void getExclusiveLockDependencies(TransactionId tid, PageId pid) throws TransactionAbortedException {
 		ArrayList<TransactionId> blockers = txnsBlockingRequest(tid, pid, Permissions.READ_WRITE);
-		System.out.println("blockers in getExclusiveLockDependencies: " + blockers);
+		System.out.println("blockers in getExclusiveLockDependencies for " + tid + ": " + blockers);
 		if(blockers.isEmpty()) {
 			// Nothing blocking us from getting the lock, grant the lock
 			addToExclusiveLocks(tid, pid);
@@ -332,12 +332,12 @@ public class LockManager {
 			System.out.println("blockers.size() " + blockers.size() + "........................................");
 
 			for(int i=0; i<blockers.size(); i++) {
-				System.out.println("blocker number " + i);
+//				System.out.println("blocker number " + i);
 				if(!dependencies.addToGraph(tid, blockers.get(i))){
 					throw new TransactionAbortedException();
 				}
 				System.out.println("After adding dependency {" + tid + ", " + blockers.get(i) + "}");
-				System.out.println("sharedLocks: " + sharedLocks + "\nexclusiveLocks: " + exclusiveLocks + "\ndependencies: " + dependencies.toString());
+				System.out.println("sharedLocks: " + sharedLocks + "\ndependencies: " + dependencies.toString());
 			}		
 			
 			// Use a sleep statement until our entry in dependencies is empty
