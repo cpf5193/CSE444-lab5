@@ -42,6 +42,7 @@ public class StringField implements Field {
 	}
 
 	public boolean equals(Object field) {
+		System.out.println("in stringfield. what.");
 		return ((StringField) field).value.equals(value);
 	}
 

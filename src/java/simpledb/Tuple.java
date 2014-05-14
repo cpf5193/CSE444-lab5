@@ -134,4 +134,24 @@ public class Tuple implements Serializable {
     public void resetTupleDesc(TupleDesc td){
         this.schema = td;
     }
+    
+    /**
+     * @return whether or not this Tuple is equal to tuple other
+     * @param other the Tuple to compare to
+     **/
+    public boolean equals(Object other) {
+    	if(other == null || !(other instanceof Tuple)) {
+    		return false;
+    	}
+    	Tuple o = (Tuple)other;
+    	boolean equalFields = true;
+    	for(int i=0; i<o.fields.length; i++){
+    		
+    		if(o.fields[i].equals(this.fields[i])){
+    			equalFields = true;
+    			i = o.fields.length;
+    		}
+    	}
+    	return (equalFields && this.recordId.equals(o.recordId));
+    }
 }

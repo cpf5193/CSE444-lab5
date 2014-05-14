@@ -40,6 +40,14 @@ public class RecordId implements Serializable {
     public PageId getPageId() {
         return this.pid;
     }
+    
+    /**
+     * @return a string representation of the RecordId
+     */
+    public String toString() {
+    	return "(pid: " + pid.toString() + ", tupleNum" + tupleNum;
+    }
+     
 
     /**
      * Two RecordId objects are considered equal if they represent the same
