@@ -332,7 +332,7 @@ public class LockManager {
 			System.out.println("blockers.size() " + blockers.size() + "........................................");
 
 			for(int i=0; i<blockers.size(); i++) {
-//				System.out.println("blocker number " + i);
+				System.out.println("blocker number " + i + " for " + tid);
 				if(!dependencies.addToGraph(tid, blockers.get(i))){
 					throw new TransactionAbortedException();
 				}

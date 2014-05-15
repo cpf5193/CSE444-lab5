@@ -148,6 +148,7 @@ public class BufferPool {
         // not necessary for lab1|lab2
     	if(commit){
     		// Flush all pages associated with tid to disk
+    		System.out.println("committing: calling flushPages in transactionComplete for " + tid);
     		flushPages(tid);
 //    		// save on disk state
 //    		for(PageId pid : lockManager.getPagesLockedByTxn(tid)){
@@ -158,10 +159,11 @@ public class BufferPool {
     		// dirty pages and re-reading them from disk
     		int tableId;
 	    	Page newPage;
-	    	
+	    	System.out.println("Starting actual abort in transactionComplete for " + tid);
 	    	// Discard all dirty pages
 	    	ArrayList<PageId> pages = lockManager.getPagesLockedByTxn(tid);
 	    	int foundIndex;
+	    	System.out.println("removing pages in transactionComplete for " + tid);
 	    	for(PageId pid : pages) {
 	    		foundIndex = usedPages.indexOf(pid);
 	    		if(foundIndex > -1) {
@@ -174,6 +176,7 @@ public class BufferPool {
 	    	// Apparently they were clean and they were evicted
 	    	// Need to ask what happens when there are 10 pages of tuples inserted but only 2 pages in the bufferpool
 	    	// Reread the pages from disk
+	    	System.out.println("re-reading pages in transactionComplete for " + tid);
 	    	for(PageId pid : pages) {
 	    		try {
 					Database.getBufferPool().getPage(tid, pid, Permissions.READ_WRITE);
