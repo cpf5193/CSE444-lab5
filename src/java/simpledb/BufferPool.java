@@ -75,7 +75,6 @@ public class BufferPool {
      */
     public Page getPage(TransactionId tid, PageId pid, Permissions perm)
         throws TransactionAbortedException, DbException {
-    	System.out.println(tid + " Requesting lock: " + perm);
     	lockManager.requestLock(tid, pid, perm);
         if(pageMap.containsKey(pid.hashCode())){  //access a page in the BufferPool
         	Page page = pageMap.get(pid.hashCode());

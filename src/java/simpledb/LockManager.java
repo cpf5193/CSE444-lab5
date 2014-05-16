@@ -110,6 +110,7 @@ public class LockManager {
 		System.out.println("State:\nsharedLocks: " + sharedLocks + "\ndependencies: " + dependencies.toString());
 		dependencies.removeAllDependenciesTo(tid);
 		System.out.println("State:\nsharedLocks: " + sharedLocks + "\ndependencies: " + dependencies.toString());
+		dependencies.abortingTids.remove(tid);
 	}
 	
 	// Returns an ArrayList of all PageId's of pages locked by transaction tid
@@ -181,10 +182,14 @@ public class LockManager {
 	public void requestLock(TransactionId tid, 
 			PageId pid, Permissions perm) throws TransactionAbortedException {
 		if(perm == Permissions.READ_ONLY){
+			System.out.println("Requesting " + perm + " lock for " + tid);
 			getSharedLock(tid, pid);
 			System.out.println("Done requesting read lock for " + tid);
 		} else {
-			getExclusiveLock(tid, pid);
+			if(!dependencies.abortingTids.contains(tid)) {
+				System.out.println("Requesting " + perm + " lock for " + tid);
+				getExclusiveLock(tid, pid);
+			}
 			System.out.println("Done requesting write lock for " + tid);
 		}
 	}

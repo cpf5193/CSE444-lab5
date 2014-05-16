@@ -14,11 +14,15 @@ public class DeadlockManager {
 	 * waiting for*/
 	private HashMap<TransactionId, ArrayList<TransactionId>> waitsForGraph;
 	
+	/** A list representing the TransactionId's that have started aborting */
+	ArrayList<TransactionId> abortingTids;
+	
 	/**
 	 * Creates a new instance of a DeadlockManager with an empty waits-for graph
 	 */
 	public DeadlockManager() {
 		this.waitsForGraph = new HashMap<TransactionId, ArrayList<TransactionId>>();
+		this.abortingTids = new ArrayList<TransactionId>();
 	}
 	
 	/**
@@ -30,6 +34,12 @@ public class DeadlockManager {
 	public synchronized boolean addToGraph(TransactionId tid1, TransactionId tid2) 
 			throws TransactionAbortedException {
 		System.out.println("Trying to add dependency " + tid1 + "->" + tid2 + " to " + waitsForGraph);
+		// If a transaction is trying to abort, remove the dependencies before trying to add
+//		if(this.abortingTids.size() > 0) {
+//			for(TransactionId t : abortingTids) {
+//				removeAllDependenciesTo(t);
+//			}
+//		}
 		// don't allow an edge to be added twice or to itself
 		if (tid1.equals(tid2) || (waitsForGraph.containsKey(tid1) && 
 				waitsForGraph.get(tid1).equals(tid2))) {
@@ -37,6 +47,8 @@ public class DeadlockManager {
 		} else if (wouldHaveCycle(tid1, tid2)) {
 			// Adding this edge would produce a deadlock, signify abort by returning false
 			System.out.println("Aborting: " + tid1);
+			abortingTids.add(tid1);
+			System.out.println("New state of abortingTids: " + abortingTids);
 			return false;
 		} else {
 			System.out.println("Adding dependency to graph: tid1=" + tid1 + ", tid2=" + tid2 + "\n");
@@ -70,7 +82,6 @@ public class DeadlockManager {
 			}
 		}
 	}
-	
 	
 	/**
 	 * Removes all dependencies that depend on desttid
