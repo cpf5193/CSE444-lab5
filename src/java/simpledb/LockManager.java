@@ -302,42 +302,28 @@ public class LockManager {
 	// Gets an exclusive lock, dealing with deadlocks using a dependency graph
 	private void getExclusiveLockDependencies(TransactionId tid, PageId pid) throws TransactionAbortedException {
 		ArrayList<TransactionId> blockers = txnsBlockingRequest(tid, pid, Permissions.READ_WRITE);
-//		System.out.println("blockers in getExclusiveLockDependencies for " + tid + ": " + blockers);
 		if(blockers.isEmpty()) {
 			// Nothing blocking us from getting the lock, grant the lock
 			addToExclusiveLocks(tid, pid);
 		} else {
 			// there is an exclusive lock blocking the request
 			// tries to add dependency to graph, aborts if there would be a deadlock
-//			System.out.println("blockers.size() " + blockers.size() + "........................................");
 
 			for(int i=0; i<blockers.size(); i++) {
-//				System.out.println("blocker number " + i + " for " + tid);
 				if(!dependencies.addToGraph(tid, blockers.get(i))){
 					throw new TransactionAbortedException();
 				}
-//				System.out.println("After adding dependency {" + tid + ", " + blockers.get(i) + "}");
-//				System.out.println("sharedLocks: " + sharedLocks + "\ndependencies: " + dependencies.toString());
 			}		
 			
 			// Use a sleep statement until our entry in dependencies is empty
 			while(dependencies.hasDependencies(tid)){
-//					System.out.println("sleeping for " + tid);
 				try {
 					Thread.sleep(10);
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}
 			}
-//			System.out.println("cleared dependency list so transaction " + tid + " can execute");
-			// The dependency list is now empty, we can execute now
 			addToExclusiveLocks(tid, pid);
-//			System.out.println("Added exclusive lock for " + tid);
-//			System.out.println("dependencies: " + dependencies.toString());
-//			System.out.println("Exclusive Locks: " + exclusiveLocks);
-//			System.out.println("Shared Locks: " + sharedLocks);
-			// We have completed our request, can remove this transaction from the dependencies
-//			dependencies.removeAllDependenciesTo(tid);
 		}
 	}
 	

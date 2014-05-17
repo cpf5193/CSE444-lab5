@@ -98,7 +98,6 @@ public class BufferPool {
     	if(usedPages.contains(pid)){
     		int oldIndex = usedPages.indexOf(pid);
 	    	PageId toFront = usedPages.remove(oldIndex);
-	    	System.out.println(usedPages.size());
 	    	usedPages.add(0, toFront);
     	}
     	
