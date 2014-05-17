@@ -17,7 +17,7 @@ public class LockManager {
 	DeadlockManager dependencies;
 	
 	// Determines whether we deal with deadlocks using a dependency graph or timeouts
-	boolean DEPENDENCIES = true;
+//	boolean DEPENDENCIES = true;
 	
 	// Constructor
 	public LockManager(int maxPages) {
@@ -107,9 +107,7 @@ public class LockManager {
 				exclusiveLocks.remove(key);
 			}
 		}
-		System.out.println("State:\nsharedLocks: " + sharedLocks + "\ndependencies: " + dependencies.toString());
 		dependencies.removeAllDependenciesTo(tid);
-		System.out.println("State:\nsharedLocks: " + sharedLocks + "\ndependencies: " + dependencies.toString());
 		dependencies.abortingTids.remove(tid);
 	}
 	
@@ -182,15 +180,11 @@ public class LockManager {
 	public void requestLock(TransactionId tid, 
 			PageId pid, Permissions perm) throws TransactionAbortedException {
 		if(perm == Permissions.READ_ONLY){
-			System.out.println("Requesting " + perm + " lock for " + tid);
 			getSharedLock(tid, pid);
-			System.out.println("Done requesting read lock for " + tid);
 		} else {
 			if(!dependencies.abortingTids.contains(tid)) {
-				System.out.println("Requesting " + perm + " lock for " + tid);
 				getExclusiveLock(tid, pid);
 			}
-			System.out.println("Done requesting write lock for " + tid);
 		}
 	}
 
@@ -235,39 +229,26 @@ public class LockManager {
 	// Attempts to acquire a shared lock for tid on pid
 	private void getSharedLock(TransactionId tid, PageId pid) 
 			throws TransactionAbortedException {
-		if(DEPENDENCIES){
+//		if(DEPENDENCIES){
 			getSharedLockDependencies(tid, pid);
-		} else {
-			getSharedLockTimeout(tid, pid);
-		}
+//		} else {
+//			getSharedLockTimeout(tid, pid);
+//		}
 	}
 	
 	// Gets a shared lock, dealing with deadlocks using the dependency graph
 	private void getSharedLockDependencies(TransactionId tid, PageId pid) throws TransactionAbortedException {
 		ArrayList<TransactionId> blockers = txnsBlockingRequest(tid, pid, Permissions.READ_ONLY);
-//		System.out.println("blockers in getSharedLockDependencies: " + blockers);
 		if(blockers.isEmpty()) {
 			// Nothing blocking us from getting the lock, grant the lock
 			addToSharedLocks(tid, pid);
 		} else {
 			// there is an exclusive lock blocking the request
-//			TransPagePerm requestingTpp = new TransPagePerm(tid, pid, Permissions.READ_ONLY);
-			System.out.println("blockers.size() " + blockers.size() + "........................................");
 			for(int i=0; i<blockers.size(); i++){
 			// tries to add dependency to graph, aborts if there would be a deadlock
 				if(!dependencies.addToGraph(tid, blockers.get(i))) {
-	//				System.out.println("sdependencies: " + dependencies.toString());
-	//				System.out.println("sExclusive Locks: " + exclusiveLocks);
-	//				System.out.println("sShared Locks: " + sharedLocks);
-	//				dependencies.removeAllDependenciesTo(tid);
-	//				System.out.println("sdependencies: " + dependencies.toString());
-	//				System.out.println("sExclusive Locks: " + exclusiveLocks);
-	//				System.out.println("sShared Locks: " + sharedLocks);
 					throw new TransactionAbortedException();
 				}
-				System.out.println("After adding dependency {" + tid + ", " + blockers.get(i) + "}");
-				System.out.println("sharedLocks: " + sharedLocks + "\ndependencies: " + dependencies.toString());
-
 			}
 			
 			// Use a sleep statement until our entry in dependencies is empty
@@ -281,83 +262,77 @@ public class LockManager {
 			
 			// The dependency list is now empty, we can execute now
 			addToSharedLocks(tid, pid);
-			
-			// We have completed our request, can remove this transaction from the dependencies
-//			dependencies.removeAllDependenciesTo(tid);
-			
-			// REMOVE AND REPLACE THIS CALL ^
 		}
 	}
 	
 	// Gets a shared lock, dealing with deadlocks using a simple timeout policy
-	private synchronized void getSharedLockTimeout(TransactionId tid, PageId pid) throws TransactionAbortedException {
-		if(otherHasExclusiveLock(tid, pid)){
-			// wait until can grant shared lock, or deadlock and abort
-			long startTime = System.currentTimeMillis();
-			while(!canGrantSharedLock(tid, pid)){
-				long currentTime = System.currentTimeMillis();
-				if((currentTime - startTime) > 1000) {
-					// Assume there is a deadlock after 1 second
-					throw new TransactionAbortedException();
-				}
-				try {
-					Thread.sleep(10);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
-			}
-			// If we made it out of the loop, we acquired the lock successfully
-			addToSharedLocks(tid, pid);
-		} else if (!holdsSharedLock(tid, pid)){
-			// If this transaction doesn't already hold a read lock, grant the read lock
-			addToSharedLocks(tid, pid);
-		}		
-	}
+//	private void getSharedLockTimeout(TransactionId tid, PageId pid) throws TransactionAbortedException {
+//		if(otherHasExclusiveLock(tid, pid)){
+//			// wait until can grant shared lock, or deadlock and abort
+//			long startTime = System.currentTimeMillis();
+//			while(!canGrantSharedLock(tid, pid)){
+//				long currentTime = System.currentTimeMillis();
+//				if((currentTime - startTime) > 100) {
+//					// Assume there is a deadlock after 1 second
+//					throw new TransactionAbortedException();
+//				}
+//				try {
+//					Thread.sleep(10);
+//				} catch (InterruptedException e) {
+//					e.printStackTrace();
+//				}
+//			}
+//			// If we made it out of the loop, we acquired the lock successfully
+//			addToSharedLocks(tid, pid);
+//		} else if (!holdsSharedLock(tid, pid)){
+//			// If this transaction doesn't already hold a read lock, grant the read lock
+//			addToSharedLocks(tid, pid);
+//		}		
+//	}
 
 	// Attempts to acquire exclusive lock for tid on pid
 	private void getExclusiveLock(TransactionId tid, PageId pid) throws TransactionAbortedException {
-		if(DEPENDENCIES){
-//			System.out.println("In getExclusiveLock");
+//		if(DEPENDENCIES){
 			getExclusiveLockDependencies(tid, pid);
-		} else {
-			getExclusiveLockTimeout(tid, pid);
-		}
+//		} else {
+//			getExclusiveLockTimeout(tid, pid);
+//		}
 	}
 	
 	// Gets an exclusive lock, dealing with deadlocks using a dependency graph
 	private void getExclusiveLockDependencies(TransactionId tid, PageId pid) throws TransactionAbortedException {
 		ArrayList<TransactionId> blockers = txnsBlockingRequest(tid, pid, Permissions.READ_WRITE);
-		System.out.println("blockers in getExclusiveLockDependencies for " + tid + ": " + blockers);
+//		System.out.println("blockers in getExclusiveLockDependencies for " + tid + ": " + blockers);
 		if(blockers.isEmpty()) {
 			// Nothing blocking us from getting the lock, grant the lock
 			addToExclusiveLocks(tid, pid);
 		} else {
 			// there is an exclusive lock blocking the request
 			// tries to add dependency to graph, aborts if there would be a deadlock
-			System.out.println("blockers.size() " + blockers.size() + "........................................");
+//			System.out.println("blockers.size() " + blockers.size() + "........................................");
 
 			for(int i=0; i<blockers.size(); i++) {
-				System.out.println("blocker number " + i + " for " + tid);
+//				System.out.println("blocker number " + i + " for " + tid);
 				if(!dependencies.addToGraph(tid, blockers.get(i))){
 					throw new TransactionAbortedException();
 				}
-				System.out.println("After adding dependency {" + tid + ", " + blockers.get(i) + "}");
-				System.out.println("sharedLocks: " + sharedLocks + "\ndependencies: " + dependencies.toString());
+//				System.out.println("After adding dependency {" + tid + ", " + blockers.get(i) + "}");
+//				System.out.println("sharedLocks: " + sharedLocks + "\ndependencies: " + dependencies.toString());
 			}		
 			
 			// Use a sleep statement until our entry in dependencies is empty
 			while(dependencies.hasDependencies(tid)){
-					System.out.println("sleeping for " + tid);
+//					System.out.println("sleeping for " + tid);
 				try {
 					Thread.sleep(10);
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}
 			}
-			System.out.println("cleared dependency list so transaction " + tid + " can execute");
+//			System.out.println("cleared dependency list so transaction " + tid + " can execute");
 			// The dependency list is now empty, we can execute now
 			addToExclusiveLocks(tid, pid);
-			System.out.println("Added exclusive lock for " + tid);
+//			System.out.println("Added exclusive lock for " + tid);
 //			System.out.println("dependencies: " + dependencies.toString());
 //			System.out.println("Exclusive Locks: " + exclusiveLocks);
 //			System.out.println("Shared Locks: " + sharedLocks);
@@ -367,31 +342,31 @@ public class LockManager {
 	}
 	
 	// Gets an exclusive lock, dealing with deadlocks using a simple timeout policy
-	private synchronized void getExclusiveLockTimeout(TransactionId tid, PageId pid) throws TransactionAbortedException {
-		if(otherHasExclusiveLock(tid, pid) || otherHasSharedLock(tid, pid)){
-			// wait until can grant exclusive lock, or deadlock and abort
-			long startTime = System.currentTimeMillis();
-			while(!canGrantExclusiveLock(tid, pid)){
-				long currentTime = System.currentTimeMillis();
-				if((currentTime - startTime) > 1000) {
-					// Assume there is a deadlock after 1 second
-					throw new TransactionAbortedException();
-				}
-				try {
-					Thread.sleep(10);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
-			}
-			// If we made it out of the loop, we acquired the lock successfully
-			addToExclusiveLocks(tid, pid);
-		} else if (holdsSharedLock(tid, pid)) {
-			// If this txn has a read lock, upgrade and grant
-			removeFromSharedLocks(tid, pid);
-			addToExclusiveLocks(tid, pid);
-		} else if (!holdsExclusiveLock(tid, pid)) {
-			// No locks exist on page, grant exclusive lock
-			addToExclusiveLocks(tid, pid);
-		}
-	}
+//	private void getExclusiveLockTimeout(TransactionId tid, PageId pid) throws TransactionAbortedException {
+//		if(otherHasExclusiveLock(tid, pid) || otherHasSharedLock(tid, pid)){
+//			// wait until can grant exclusive lock, or deadlock and abort
+//			long startTime = System.currentTimeMillis();
+//			while(!canGrantExclusiveLock(tid, pid)){
+//				long currentTime = System.currentTimeMillis();
+//				if((currentTime - startTime) > 100) {
+//					// Assume there is a deadlock after .1 second
+//					throw new TransactionAbortedException();
+//				}
+//				try {
+//					Thread.sleep(10);
+//				} catch (InterruptedException e) {
+//					e.printStackTrace();
+//				}
+//			}
+//			// If we made it out of the loop, we acquired the lock successfully
+//			addToExclusiveLocks(tid, pid);
+//		} else if (holdsSharedLock(tid, pid)) {
+//			// If this txn has a read lock, upgrade and grant
+//			removeFromSharedLocks(tid, pid);
+//			addToExclusiveLocks(tid, pid);
+//		} else if (!holdsExclusiveLock(tid, pid)) {
+//			// No locks exist on page, grant exclusive lock
+//			addToExclusiveLocks(tid, pid);
+//		}
+//	}
 }

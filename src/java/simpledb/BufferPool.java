@@ -94,13 +94,14 @@ public class BufferPool {
     }
     
     //Moves the page corresponding to the given PageId to the front of the LRU list
-    private void movePageToFront(PageId pid){
-    	if(!usedPages.contains(pid)){
-    		throw new IllegalArgumentException("Invalid PageId");
+    private synchronized void movePageToFront(PageId pid){
+    	if(usedPages.contains(pid)){
+    		int oldIndex = usedPages.indexOf(pid);
+	    	PageId toFront = usedPages.remove(oldIndex);
+	    	System.out.println(usedPages.size());
+	    	usedPages.add(0, toFront);
     	}
-    	int oldIndex = usedPages.indexOf(pid);
-    	PageId toFront = usedPages.remove(oldIndex);
-    	usedPages.add(0, toFront);
+    	
     }
 
     /**
@@ -147,7 +148,6 @@ public class BufferPool {
         // not necessary for lab1|lab2
     	if(commit){
     		// Flush all pages associated with tid to disk
-    		System.out.println("committing: calling flushPages in transactionComplete for " + tid);
     		flushPages(tid);
 //    		// save on disk state
 //    		for(PageId pid : lockManager.getPagesLockedByTxn(tid)){
@@ -158,11 +158,11 @@ public class BufferPool {
     		// dirty pages and re-reading them from disk
     		int tableId;
 	    	Page newPage;
-	    	System.out.println("Starting actual abort in transactionComplete for " + tid);
+//	    	System.out.println("Starting actual abort in transactionComplete for " + tid);
 	    	// Discard all dirty pages
 	    	ArrayList<PageId> pages = lockManager.getPagesLockedByTxn(tid);
 	    	int foundIndex;
-	    	System.out.println("removing pages in transactionComplete for " + tid);
+//	    	System.out.println("removing pages in transactionComplete for " + tid);
 	    	for(PageId pid : pages) {
 	    		foundIndex = usedPages.indexOf(pid);
 	    		if(foundIndex > -1) {
@@ -175,7 +175,7 @@ public class BufferPool {
 	    	// Apparently they were clean and they were evicted
 	    	// Need to ask what happens when there are 10 pages of tuples inserted but only 2 pages in the bufferpool
 	    	// Reread the pages from disk
-	    	System.out.println("re-reading pages in transactionComplete for " + tid);
+//	    	System.out.println("re-reading pages in transactionComplete for " + tid);
 	    	for(PageId pid : pages) {
 	    		try {
 					Database.getBufferPool().getPage(tid, pid, Permissions.READ_WRITE);
@@ -212,14 +212,14 @@ public class BufferPool {
 //    		}
     	}
     	// Release all locks that this transaction holds
-		System.out.println("\nbpdependencies: " + lockManager.dependencies.toString());
-		System.out.println("bpExclusive Locks: " + lockManager.exclusiveLocks);
-		System.out.println("bpShared Locks: " + lockManager.sharedLocks);
+//		System.out.println("\nbpdependencies: " + lockManager.dependencies.toString());
+//		System.out.println("bpExclusive Locks: " + lockManager.exclusiveLocks);
+//		System.out.println("bpShared Locks: " + lockManager.sharedLocks);
 		lockManager.releaseAllLocksForTxn(tid);
-		System.out.println("\nAfter removing locks and dependencies for tid = " + tid + ": ");
-		System.out.println("bpdependencies: " + lockManager.dependencies.toString());
-		System.out.println("bpExclusive Locks: " + lockManager.exclusiveLocks);
-		System.out.println("bpShared Locks: " + lockManager.sharedLocks + "\n");
+//		System.out.println("\nAfter removing locks and dependencies for tid = " + tid + ": ");
+//		System.out.println("bpdependencies: " + lockManager.dependencies.toString());
+//		System.out.println("bpExclusive Locks: " + lockManager.exclusiveLocks);
+//		System.out.println("bpShared Locks: " + lockManager.sharedLocks + "\n");
     }
 
     /**

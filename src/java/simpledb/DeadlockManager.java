@@ -33,25 +33,15 @@ public class DeadlockManager {
 	 */
 	public synchronized boolean addToGraph(TransactionId tid1, TransactionId tid2) 
 			throws TransactionAbortedException {
-		System.out.println("Trying to add dependency " + tid1 + "->" + tid2 + " to " + waitsForGraph);
-		// If a transaction is trying to abort, remove the dependencies before trying to add
-//		if(this.abortingTids.size() > 0) {
-//			for(TransactionId t : abortingTids) {
-//				removeAllDependenciesTo(t);
-//			}
-//		}
 		// don't allow an edge to be added twice or to itself
 		if (tid1.equals(tid2) || (waitsForGraph.containsKey(tid1) && 
 				waitsForGraph.get(tid1).equals(tid2))) {
 			return true;
 		} else if (wouldHaveCycle(tid1, tid2)) {
 			// Adding this edge would produce a deadlock, signify abort by returning false
-			System.out.println("Aborting: " + tid1);
 			abortingTids.add(tid1);
-			System.out.println("New state of abortingTids: " + abortingTids);
 			return false;
 		} else {
-			System.out.println("Adding dependency to graph: tid1=" + tid1 + ", tid2=" + tid2 + "\n");
 			// Legal to add this dependency
 			if(waitsForGraph.containsKey(tid1)) {
 				ArrayList<TransactionId> dependsOnList = waitsForGraph.get(tid1);
@@ -60,7 +50,6 @@ public class DeadlockManager {
 				waitsForGraph.put(tid1, dependsOnList);
 			} else {
 				waitsForGraph.put(tid1, new ArrayList<TransactionId>(Arrays.asList(tid2)));
-				System.out.println("waitsForGraph: " + waitsForGraph  + "\n");
 			}
 		}
 		return true;
@@ -96,7 +85,6 @@ public class DeadlockManager {
 		for(TransactionId tid : keySetCopy) {
 			ArrayList<TransactionId> dependsOnList = new ArrayList<TransactionId>();
 			dependsOnList.addAll(waitsForGraph.get(tid));
-			//waitsForGraph.get(tid);
 			
 			if(waitsForGraph.get(tid).contains(desttid)) {
 				dependsOnList.remove(desttid);
@@ -111,7 +99,6 @@ public class DeadlockManager {
 		if(waitsForGraph.containsKey(desttid)) {
 			waitsForGraph.remove(desttid);
 		}
-		System.out.println("End of removeAllDependenciesTo");
 	}
 	
 	
@@ -136,8 +123,6 @@ public class DeadlockManager {
 		ArrayList<TransactionId> visitedtids = new ArrayList<TransactionId>();
 		q.add(tid1);
 		visitedtids.add(tid1);
-//		System.out.println("\nInput to depthFirstSearch: \ntid1: " + tid1 + "\ntid2: " + tid2);
-//		System.out.println("contents of waitsForGraph: " + waitsForGraph + "\n");
 		while(!q.isEmpty()) {
 			TransactionId tid = q.remove();
 			if(tid.equals(tid2)) {
