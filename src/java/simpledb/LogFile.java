@@ -467,6 +467,32 @@ public class LogFile {
             synchronized(this) {
                 preAppend();
                 // some code goes here
+                raf.seek(tidToFirstLogRecord.get(tid.getId()));
+                int recordstart, entryType;
+                while(raf.getFilePointer() >= INT_SIZE) {
+                	// Find start of this LogRecord
+                	recordstart = raf.readInt();
+                	// Go to the start
+                	raf.seek(recordstart);
+                	// Beginning element is the type
+                	entryType = raf.readInt();
+                	raf.seek(raf.getFilePointer() + INT_SIZE);
+                	// Next element is the tid, go past type
+                	if(raf.readLong() == tid.getId() && entryType == UPDATE_RECORD) {
+                		// Next element is the beforeImage, go past tid
+                		raf.seek(raf.getFilePointer() + LONG_SIZE);
+                		Page beforeImage = readPageData(raf).getBeforeImage();
+                		// Write beforeImage to the local file
+                		((HeapFile) Database.getCatalog().getDatabaseFile(beforeImage.getId()
+                				.getTableId())).writePage(beforeImage);
+                		Database.getBufferPool().discardPage(beforeImage.getId());
+                	}
+                	// Done with this record, set to start and move back
+                	// to go to the previous record
+                	raf.seek(recordstart - LONG_SIZE);
+                }
+
+                
             }
         }
     }
