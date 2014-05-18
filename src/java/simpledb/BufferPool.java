@@ -294,7 +294,15 @@ public class BufferPool {
      */
     private void flushPage(PageId pid) throws IOException {
     	DbFile file = Database.getCatalog().getDatabaseFile(pid.getTableId());
-    	file.writePage(pageMap.get(pid.hashCode()));
+    	Page p = pageMap.get(pid.hashCode());
+    	// append an update record to the log, with 
+        // a before-image and after-image.
+        TransactionId dirtier = p.isDirty();
+        if (dirtier != null){
+          Database.getLogFile().logWrite(dirtier, p.getBeforeImage(), p);
+          Database.getLogFile().force();
+        }
+    	file.writePage(p);
     }
 
     /** Write all pages of the specified transaction to disk.
@@ -305,10 +313,14 @@ public class BufferPool {
     	
     	//For all pages that this transaction has locks on, flush to disk using flushPage
     	ArrayList<PageId> pages = lockManager.getPagesLockedByTxn(tid);
+    	Page p;
     	for(PageId pid : pages) {
-    		if(pageMap.get(pid.hashCode()) != null &&
-    				pageMap.get(pid.hashCode()).isDirty() != null) {
+    		p = pageMap.get(pid.hashCode());
+    		if(p != null && p.isDirty() != null) {
     			flushPage(pid);
+    			// use current page contents as the before-image
+    	        // for the next transaction that modifies this page.
+    	        p.setBeforeImage();
     		}
     	}
     }
