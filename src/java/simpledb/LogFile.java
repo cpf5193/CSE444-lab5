@@ -468,26 +468,25 @@ public class LogFile {
             	print();
                 preAppend();
                 // some code goes here
-                raf.seek(tidToFirstLogRecord.get(tid.getId()));
-                int recordstart, entryType;
-                while(raf.getFilePointer() >= INT_SIZE) {
+                raf.seek(raf.length() - LONG_SIZE);
+                System.out.println(raf.getFilePointer());
+                System.out.println(raf.getFilePointer());
+                long recordstart; 
+                int entryType;
+                while(raf.getFilePointer() >= tidToFirstLogRecord.get(tid.getId())) {
                 	// Find start of this LogRecord
-                	recordstart = raf.readInt();
+                	recordstart = raf.readLong();
                 	// Go to the start
                 	raf.seek(recordstart);
                 	// Beginning element is the type
                 	entryType = raf.readInt();
-//                	raf.seek(raf.getFilePointer() + INT_SIZE);
-                	// Next element is the tid, go past type
-                	if(raf.readLong() == tid.getId() && entryType == UPDATE_RECORD) {
-                		// Next element is the beforeImage, go past tid
-//                		raf.seek(raf.getFilePointer() + LONG_SIZE);
+            		if(entryType == UPDATE_RECORD && raf.readLong() == tid.getId()) {
                 		Page beforeImage = readPageData(raf).getBeforeImage();
                 		// Write beforeImage to the local file
                 		((HeapFile) Database.getCatalog().getDatabaseFile(beforeImage.getId()
                 				.getTableId())).writePage(beforeImage);
                 		Database.getBufferPool().discardPage(beforeImage.getId());
-                	}
+            		}
                 	// Done with this record, set to start and move back
                 	// to go to the previous record
                 	if(!((recordstart - LONG_SIZE) < 0))
@@ -496,6 +495,7 @@ public class LogFile {
                 }
             }
         }
+        print();
     }
 
     /** Shutdown the logging system, writing out whatever state
@@ -533,7 +533,7 @@ public class LogFile {
     	raf.seek(0);
     	// Read the last written checkpoint offset
     	if(fileSize > LONG_SIZE)
-    		System.out.println(raf.getFilePointer() + ": Last checkpoint = " + raf.readLong() + "\n");
+    		System.out.println(raf.getFilePointer() + ": Last checkpoint = " + raf.readLong());
     	while(raf.getFilePointer() < fileSize) {
     		System.out.print("\n" + raf.getFilePointer() + " Type: ");
     		int type = raf.readInt();
@@ -565,6 +565,7 @@ public class LogFile {
     		}
     		System.out.println(raf.getFilePointer() + ": LogRecord offset = " + raf.readLong());
     	}
+    	System.out.println("Log size: " + raf.length());
     	raf.seek(savedPtr);
     }
     
