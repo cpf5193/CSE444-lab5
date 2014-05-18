@@ -489,10 +489,10 @@ public class LogFile {
                 	}
                 	// Done with this record, set to start and move back
                 	// to go to the previous record
-                	raf.seek(recordstart - LONG_SIZE);
+                	if(!((recordstart - LONG_SIZE) < 0))
+                		raf.seek(recordstart - LONG_SIZE);
+                	else raf.seek(0);
                 }
-
-                
             }
         }
     }
