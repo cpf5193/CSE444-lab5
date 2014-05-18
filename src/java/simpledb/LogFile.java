@@ -465,6 +465,7 @@ public class LogFile {
         throws NoSuchElementException, IOException {
         synchronized (Database.getBufferPool()) {
             synchronized(this) {
+            	print();
                 preAppend();
                 // some code goes here
                 raf.seek(tidToFirstLogRecord.get(tid.getId()));
@@ -476,11 +477,11 @@ public class LogFile {
                 	raf.seek(recordstart);
                 	// Beginning element is the type
                 	entryType = raf.readInt();
-                	raf.seek(raf.getFilePointer() + INT_SIZE);
+//                	raf.seek(raf.getFilePointer() + INT_SIZE);
                 	// Next element is the tid, go past type
                 	if(raf.readLong() == tid.getId() && entryType == UPDATE_RECORD) {
                 		// Next element is the beforeImage, go past tid
-                		raf.seek(raf.getFilePointer() + LONG_SIZE);
+//                		raf.seek(raf.getFilePointer() + LONG_SIZE);
                 		Page beforeImage = readPageData(raf).getBeforeImage();
                 		// Write beforeImage to the local file
                 		((HeapFile) Database.getCatalog().getDatabaseFile(beforeImage.getId()
@@ -524,9 +525,85 @@ public class LogFile {
          }
     }
 
-    /** Print out a human readable represenation of the log */
+    /** Print out a human readable representation of the log */
     public void print() throws IOException {
-        // some code goes here
+        // save the current raf pointer
+    	long savedPtr = raf.getFilePointer();
+    	long fileSize = raf.length();
+    	raf.seek(0);
+    	// Read the last written checkpoint offset
+    	if(fileSize > LONG_SIZE)
+    		System.out.println(raf.getFilePointer() + ": Last checkpoint = " + raf.readLong() + "\n");
+    	while(raf.getFilePointer() < fileSize) {
+    		System.out.print("\n" + raf.getFilePointer() + " Type: ");
+    		int type = raf.readInt();
+    		switch(type) {
+    		case CHECKPOINT_RECORD :
+    			System.out.println("<CHECKPOINT>");
+    			System.out.println(raf.getFilePointer() + ": tid = " + raf.readLong());
+    			// The format of the record is an integer count of the number of transactions, 
+    			// as well as a long integer transaction id and a long integer first record offset for each active transaction.
+    			printCkptRecord();
+    			break;
+    		case UPDATE_RECORD :
+    			System.out.println("<UPDATE>");
+    			System.out.println(raf.getFilePointer() + ": tid = " + raf.readLong());
+    			printUpdateRecord();
+    			break;
+    		case COMMIT_RECORD :
+    			System.out.println("<COMMIT>");
+    			System.out.println(raf.getFilePointer() + ": tid = " + raf.readLong());
+    			break;
+    		case BEGIN_RECORD :
+    			System.out.println("<BEGIN>");
+    			System.out.println(raf.getFilePointer() + ": tid = " + raf.readLong());
+    			break;
+    		case ABORT_RECORD :
+    			System.out.println("<ABORT>");
+    			System.out.println(raf.getFilePointer() + ": tid = " + raf.readLong());
+    			break;
+    		}
+    		System.out.println(raf.getFilePointer() + ": LogRecord offset = " + raf.readLong());
+    	}
+    	raf.seek(savedPtr);
+    }
+    
+    private void printCkptRecord() throws IOException {
+    	// The format of the record is an integer count of the number of transactions, 
+		// as well as a long integer transaction id and a long integer first record offset for each active transaction.
+    	System.out.print(raf.getFilePointer() + ": Num transactions in CKPT = ");
+		int numTransactions = raf.readInt();
+		System.out.println(numTransactions);
+		for(int i=1; i<=numTransactions; i++) {
+			System.out.println(raf.getFilePointer() + ": tid of t" + i + " = " + raf.readLong());
+			System.out.println(raf.getFilePointer() + ": first log record offset of t" + i +
+							   "= " + raf.readLong());			
+		}
+    }
+    
+    private void printUpdateRecord() throws IOException {
+    	System.out.print(raf.getFilePointer() + ": beforeImage = ");
+		Page beforeImage = readPageData(raf);
+		byte[] bidata = beforeImage.getPageData();
+		String dirty = "Dirty";
+		if(beforeImage.isDirty() == null)
+			dirty = "Clean";
+		System.out.println("id: " + beforeImage.getId() + " (" + dirty + ")");    			
+		System.out.print(raf.getFilePointer() + ": afterImage = ");
+		Page afterImage = readPageData(raf);
+		byte[] aidata = afterImage.getPageData();
+		dirty = "Dirty";
+		if(afterImage.isDirty() == null)
+			dirty = "Clean";
+		System.out.println("id: " + afterImage.getId() + " (" + dirty + ")");
+    	boolean isDifferent = false;
+    	for(int i=0; i<aidata.length; i++) {
+    		if(aidata[i] != bidata[i])
+    			System.out.println("Difference at position " + i + ": beforeImage = " + 
+    					bidata[i] + ", afterImage = " + aidata[i]);
+    			isDifferent = true;
+    	}
+    	System.out.println("In flushPage: " + isDifferent);
     }
 
     public  synchronized void force() throws IOException {

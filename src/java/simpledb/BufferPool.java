@@ -142,7 +142,7 @@ public class BufferPool {
      * @param commit a flag indicating whether we should commit or abort
      */
     public synchronized void transactionComplete(TransactionId tid, boolean commit)
-        throws IOException {
+    	throws IOException {
         // some code goes here
         // not necessary for lab1|lab2
     	if(commit){

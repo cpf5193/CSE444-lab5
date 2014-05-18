@@ -1,7 +1,9 @@
 package simpledb;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class LockManager {
@@ -247,6 +249,11 @@ public class LockManager {
 			for(int i=0; i<blockers.size(); i++){
 			// tries to add dependency to graph, aborts if there would be a deadlock
 				if(!dependencies.addToGraph(tid, blockers.get(i))) {
+					try {
+						Database.getLogFile().rollback(tid);
+					} catch (NoSuchElementException | IOException e) {
+						e.printStackTrace();
+					}
 					throw new TransactionAbortedException();
 				}
 			}
@@ -311,6 +318,11 @@ public class LockManager {
 
 			for(int i=0; i<blockers.size(); i++) {
 				if(!dependencies.addToGraph(tid, blockers.get(i))){
+					try {
+						Database.getLogFile().rollback(tid);
+					} catch (NoSuchElementException | IOException e) {
+						e.printStackTrace();
+					}
 					throw new TransactionAbortedException();
 				}
 			}		
