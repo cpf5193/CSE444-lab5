@@ -634,7 +634,7 @@ public class LogFile {
     
     private void redo() throws IOException {
     	long savedPoint = raf.getFilePointer();
-    	
+    	//
     	
     	raf.seek(savedPoint);
     }
