@@ -465,9 +465,10 @@ public class LogFile {
         throws NoSuchElementException, IOException {
         synchronized (Database.getBufferPool()) {
             synchronized(this) {
-            	print();
+//            	print();
                 preAppend();
                 // some code goes here
+                long savedOffset = raf.getFilePointer();
                 raf.seek(raf.length() - LONG_SIZE);
                 System.out.println(raf.getFilePointer());
                 System.out.println(raf.getFilePointer());
@@ -483,8 +484,10 @@ public class LogFile {
             		if(entryType == UPDATE_RECORD && raf.readLong() == tid.getId()) {
                 		Page beforeImage = readPageData(raf).getBeforeImage();
                 		// Write beforeImage to the local file
+                		System.out.println("in rollback: " + beforeImage.getId());
                 		((HeapFile) Database.getCatalog().getDatabaseFile(beforeImage.getId()
                 				.getTableId())).writePage(beforeImage);
+                		Database.getBufferPool().insertIntoPageMap(beforeImage.getId(), beforeImage);
                 		Database.getBufferPool().discardPage(beforeImage.getId());
             		}
                 	// Done with this record, set to start and move back
@@ -493,9 +496,10 @@ public class LogFile {
                 		raf.seek(recordstart - LONG_SIZE);
                 	else raf.seek(0);
                 }
+                raf.seek(savedOffset);
             }
         }
-        print();
+//        print();
     }
 
     /** Shutdown the logging system, writing out whatever state

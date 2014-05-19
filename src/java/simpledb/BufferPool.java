@@ -53,6 +53,12 @@ public class BufferPool {
       return pageSize;
     }
     
+    public void insertIntoPageMap(PageId pid, Page p) {
+    	if(pageMap.containsKey(pid.hashCode())) {
+    		pageMap.put(pid.hashCode(), p);
+    	}
+    }
+    
     // THIS FUNCTION SHOULD ONLY BE USED FOR TESTING!!
     public static void setPageSize(int pageSize) {
     	BufferPool.pageSize = pageSize;
@@ -274,6 +280,7 @@ public class BufferPool {
     public synchronized void flushAllPages() throws IOException {
     	for(int key : pageMap.keySet()){
         	Page p = pageMap.get(key);
+        	System.out.println("In flushAllPages: " + p.getId());
         	flushPage(p.getId());
         }
     }
