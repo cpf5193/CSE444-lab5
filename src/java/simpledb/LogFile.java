@@ -91,7 +91,13 @@ public class LogFile {
 //    int pageSize;
     int totalRecords = 0; // for PatchTest //protected by this
 
-    HashMap<Long,Long> tidToFirstLogRecord = new HashMap<Long,Long>();
+    HashMap<Long, Long> tidToFirstLogRecord = new HashMap<Long, Long>();
+    // Dirty page table
+    HashMap<PageId, Long> dirtyPages = new HashMap<PageId, Long>();
+    // Active transaction table
+    HashMap<TransactionId, Long> activeTxns = new HashMap<TransactionId, Long>();
+    // Transactions to updates
+    HashMap<TransactionId, ArrayList<Long>> undoChain = new HashMap<TransactionId, ArrayList<Long>>();
 
     /** Constructor.
         Initialize and back the log file with the specified file.
@@ -472,13 +478,13 @@ public class LogFile {
                 raf.seek(raf.length() - LONG_SIZE);
                 System.out.println(raf.getFilePointer());
                 System.out.println(raf.getFilePointer());
-                long recordstart; 
+                long recordStart; 
                 int entryType;
                 while(raf.getFilePointer() >= tidToFirstLogRecord.get(tid.getId())) {
                 	// Find start of this LogRecord
-                	recordstart = raf.readLong();
+                	recordStart = raf.readLong();
                 	// Go to the start
-                	raf.seek(recordstart);
+                	raf.seek(recordStart);
                 	// Beginning element is the type
                 	entryType = raf.readInt();
             		if(entryType == UPDATE_RECORD && raf.readLong() == tid.getId()) {
@@ -492,8 +498,8 @@ public class LogFile {
             		}
                 	// Done with this record, set to start and move back
                 	// to go to the previous record
-                	if(!((recordstart - LONG_SIZE) < 0))
-                		raf.seek(recordstart - LONG_SIZE);
+                	if(!((recordStart - LONG_SIZE) < 0))
+                		raf.seek(recordStart - LONG_SIZE);
                 	else raf.seek(0);
                 }
                 raf.seek(savedOffset);
@@ -524,10 +530,68 @@ public class LogFile {
         synchronized (Database.getBufferPool()) {
             synchronized (this) {
                 recoveryUndecided = false;
-                // some code goes here
+                // Search from the back to find the last checkpoint.
+                long lastOffset = findLastCkpt();
+                raf.seek(lastOffset);
+                analysis();
+                redo();
+                undo();
             }
          }
     }
+    
+    /* Returns the offset of the last checkpoint.
+     * If no checkpoints exist, returns 0*/
+    private long findLastCkpt() throws IOException {
+    	long offset = 0;
+    	long savedPoint = raf.getFilePointer();
+    	raf.seek(raf.length() - LONG_SIZE);
+    	long recordStart;
+    	int entryType;
+    	while(raf.getFilePointer() >= LONG_SIZE) {
+    		// Find start of this LogRecord
+        	recordStart = raf.readLong();
+        	// Go to the start
+        	raf.seek(recordStart);
+        	// Beginning element is the type
+        	entryType = raf.readInt();
+        	// Skip over the tid
+        	raf.seek(raf.getFilePointer() + LONG_SIZE);
+    		if(entryType == CHECKPOINT_RECORD) {
+    			offset = recordStart;
+    			raf.seek(0);  // ends loop
+    		}
+    	}
+    	raf.seek(savedPoint);
+    	return offset;
+    }
+    
+    // Build up the activeTxns and dirty page tables from log
+    private void analysis() throws IOException {
+    	long savedPoint = raf.getFilePointer();
+    	long lastCkpt = findLastCkpt();
+        raf.seek(lastCkpt);
+        // From the last checkpoint, re-build the tables
+        // Skip over checkpoint's type and tid
+        raf.seek(raf.getFilePointer() + INT_SIZE + LONG_SIZE);
+    	
+    	raf.seek(savedPoint);
+    }
+    
+    private void redo() throws IOException {
+    	long savedPoint = raf.getFilePointer();
+    	
+    	
+    	raf.seek(savedPoint);
+    }
+    
+    private void undo() throws IOException {
+    	long savedPoint = raf.getFilePointer();
+    	
+    	
+    	raf.seek(savedPoint);
+    }
+    
 
     /** Print out a human readable representation of the log */
     public void print() throws IOException {
@@ -579,7 +643,7 @@ public class LogFile {
     	System.out.print(raf.getFilePointer() + ": Num transactions in CKPT = ");
 		int numTransactions = raf.readInt();
 		System.out.println(numTransactions);
-		for(int i=1; i<=numTransactions; i++) {
+		for(int i=0; i<numTransactions; i++) {
 			System.out.println(raf.getFilePointer() + ": tid of t" + i + " = " + raf.readLong());
 			System.out.println(raf.getFilePointer() + ": first log record offset of t" + i +
 							   "= " + raf.readLong());			
