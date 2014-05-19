@@ -95,9 +95,9 @@ public class LogFile {
     // Dirty page table
     HashMap<PageId, Long> dirtyPages = new HashMap<PageId, Long>();
     // Active transaction table
-    HashMap<TransactionId, Long> activeTxns = new HashMap<TransactionId, Long>();
+    HashMap<Long, Long> activeTxns = new HashMap<Long, Long>();
     // Transactions to updates
-    HashMap<TransactionId, ArrayList<Long>> undoChain = new HashMap<TransactionId, ArrayList<Long>>();
+    HashMap<Long, ArrayList<Long>> undoChain = new HashMap<Long, ArrayList<Long>>();
 
     /** Constructor.
         Initialize and back the log file with the specified file.
@@ -545,25 +545,46 @@ public class LogFile {
     private long findLastCkpt() throws IOException {
     	long offset = 0;
     	long savedPoint = raf.getFilePointer();
-    	raf.seek(raf.length() - LONG_SIZE);
-    	long recordStart;
-    	int entryType;
-    	while(raf.getFilePointer() >= LONG_SIZE) {
-    		// Find start of this LogRecord
-        	recordStart = raf.readLong();
-        	// Go to the start
-        	raf.seek(recordStart);
-        	// Beginning element is the type
-        	entryType = raf.readInt();
-        	// Skip over the tid
-        	raf.seek(raf.getFilePointer() + LONG_SIZE);
-    		if(entryType == CHECKPOINT_RECORD) {
-    			offset = recordStart;
-    			raf.seek(0);  // ends loop
-    		}
+    	raf.seek(0);
+    	long lastCkpt = raf.readLong();
+    	if(lastCkpt != NO_CHECKPOINT_ID) {
+    		offset = lastCkpt;
     	}
     	raf.seek(savedPoint);
     	return offset;
+//    	long offset = 0;
+//    	long savedPoint = raf.getFilePointer();
+//    	raf.seek(raf.length() - LONG_SIZE);
+//    	long recordStart;
+//    	int entryType;
+//    	while(raf.getFilePointer() >= LONG_SIZE) {
+//    		// Find start of this LogRecord
+//        	recordStart = raf.readLong();
+//        	// Go to the start
+//        	raf.seek(recordStart);
+//        	// Beginning element is the type
+//        	entryType = raf.readInt();
+//        	// Skip over the tid
+//        	raf.seek(raf.getFilePointer() + LONG_SIZE);
+//    		if(entryType == CHECKPOINT_RECORD) {
+//    			offset = recordStart;
+//    			raf.seek(0);  // ends loop
+//    		}
+//    	}
+//    	raf.seek(savedPoint);
+//    	return offset;
+    }
+    
+    /* Starting from the numTransactions record, adds all txns
+     * into the active transaction table. File pointer will end at the
+     * byte after the last transaction */
+    private void addCkptTxns() throws IOException {
+    	int numTxns = raf.readInt();
+    	for(int i=0; i<numTxns; i++) {
+    		long tid = raf.readLong();
+    		long offset = raf.readLong();
+    		this.activeTxns.put(tid, offset);
+    	}
     }
     
     // Build up the activeTxns and dirty page tables from log
@@ -574,7 +595,40 @@ public class LogFile {
         // From the last checkpoint, re-build the tables
         // Skip over checkpoint's type and tid
         raf.seek(raf.getFilePointer() + INT_SIZE + LONG_SIZE);
-    	
+        //do switch statement, if ckpt, call addCkptTxns
+        int type;
+        long tid;
+        while(raf.getFilePointer() < raf.length()) {
+        	long recordStart = raf.getFilePointer();
+        	type = raf.readInt();
+        	tid = raf.readLong();
+        	switch(type) {
+        	case ABORT_RECORD :
+        		activeTxns.remove(tid);
+        		break;
+        	case COMMIT_RECORD :
+        		activeTxns.remove(tid);
+        		break;
+        	case UPDATE_RECORD :
+        		activeTxns.put(tid, recordStart);
+        		// Read the pageData, put in dirtyPage table
+        		// only really need one of the images
+        		Page beforeImage = readPageData(raf);
+        		readPageData(raf);
+        		PageId pid = beforeImage.getId();
+        		if(!dirtyPages.containsKey(pid)) {
+        			dirtyPages.put(pid, recordStart);
+        		}
+        		break;
+        	case BEGIN_RECORD :
+        		activeTxns.put(tid, recordStart);
+        		tidToFirstLogRecord.put(tid, recordStart);
+        		break;
+        	case CHECKPOINT_RECORD :
+        		addCkptTxns();
+        		break;
+        	}
+        }
     	raf.seek(savedPoint);
     }
     
