@@ -593,7 +593,7 @@ public class LogFile {
     	long lastCkpt = findLastCkpt();
         raf.seek(lastCkpt);
         if(lastCkpt == 0) {
-        	raf.seek(raf.getFilePointer() + INT_SIZE);
+        	raf.seek(raf.getFilePointer() + LONG_SIZE);
         } else {
         	raf.seek(raf.getFilePointer() + INT_SIZE + LONG_SIZE);
         }
@@ -636,6 +636,7 @@ public class LogFile {
         		raf.seek(raf.getFilePointer() + LONG_SIZE);
         		break;
         	}
+        	raf.seek(raf.getFilePointer() + LONG_SIZE);
         }
     	raf.seek(savedPoint);
     }

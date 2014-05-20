@@ -280,7 +280,6 @@ public class BufferPool {
     public synchronized void flushAllPages() throws IOException {
     	for(int key : pageMap.keySet()){
         	Page p = pageMap.get(key);
-        	System.out.println("In flushAllPages: " + p.getId());
         	flushPage(p.getId());
         }
     }
