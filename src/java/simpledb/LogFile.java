@@ -642,15 +642,24 @@ public class LogFile {
     }
     
     private void redo() throws IOException {
-    	long savedPoint = raf.getFilePointer();
-    	// find the first lsn from the dirty page table
-    	long smallestLSN = -1;
-    	for(PageId pid : dirtyPages.keySet()) {
-    		long nextLSN = dirtyPages.get(pid);
-    		if(nextLSN < smallestLSN) {
-    			smallestLSN = nextLSN;
-    		}
+    	if(dirtyPages.keySet().size() == 0) {
+    		return;
     	}
+    	long savedPoint = raf.getFilePointer();
+    	long lastCkpt = findLastCkpt();
+    	raf.seek(lastCkpt);
+    	if(lastCkpt == 0) {
+    		raf.seek(LONG_SIZE);
+    	}
+    	
+//    	// find the first lsn from the dirty page table
+//    	long smallestLSN = Long.MAX_VALUE;
+//    	for(PageId pid : dirtyPages.keySet()) {
+//    		long nextLSN = dirtyPages.get(pid);
+//    		if(nextLSN < smallestLSN) {
+//    			smallestLSN = nextLSN;
+//    		}
+//    	}
     	// We now have the smallest LSN
     	
     	int type;
@@ -658,8 +667,8 @@ public class LogFile {
     	long recordStart;
     	while(raf.getFilePointer() < raf.length()) {
     		recordStart = raf.getFilePointer();
-    		type = raf.readInt();
-    		tid = raf.readLong();
+			type = raf.readInt();
+			tid = raf.readLong();
     		switch(type) {
     		case BEGIN_RECORD :
     			tidToFirstLogRecord.put(tid, recordStart);
@@ -687,8 +696,8 @@ public class LogFile {
     			
     			// Don't have the resources to check pageLSN >= recordStart, but
     			// writing it over is trivial
-    			if(dirtyPages.containsKey(beforeImage) && 
-    				dirtyPages.get(beforeImage) <= recordStart){
+    			if(dirtyPages.containsKey(beforeImage.getId()) && 
+    				dirtyPages.get(beforeImage.getId()) <= recordStart){
     				file.writePage(afterImage);
     			}
     			
@@ -708,13 +717,24 @@ public class LogFile {
     
     private void undo() throws IOException {
     	long savedPoint = raf.getFilePointer();
+    	print();
+    	
+    	// Sort the transaction offsets into toUndo
     	ArrayList<Long> toUndo = new ArrayList<Long>();
     	toUndo.addAll(activeTxns.values());
     	Collections.sort(toUndo);
+    	
+    	// Create a list of ordered Transactions to go along with the undo offsets
+    	ArrayList<Long> orderedTxns = new ArrayList<Long>(toUndo.size());
+    	for(long txn : activeTxns.keySet()) {
+    		long txnLSN = activeTxns.get(txn);
+    		orderedTxns.add(toUndo.indexOf(txnLSN), txn);
+    	}
+    	
     	// For each loser transaction
     	for(int i=toUndo.size()-1; i>=0; i--) {
     		// For each record in the chain
-    		for(long lsn : undoChain.get(toUndo.get(i))) {
+    		for(long lsn : undoChain.get(orderedTxns.get(i))) {
     			// go to the offset, read the page, and write the old value to disk
     			raf.seek(lsn + INT_SIZE + LONG_SIZE);
     			Page beforeImage = readPageData(raf);
