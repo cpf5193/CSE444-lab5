@@ -168,6 +168,8 @@ public class LogFile {
                 raf.writeInt(ABORT_RECORD);
                 raf.writeLong(tid.getId());
                 raf.writeLong(currentOffset);
+//                activeTxns.remove(tid.getId());
+//                undoChain.remove(tid.getId());
                 currentOffset = raf.getFilePointer();
                 force();
                 tidToFirstLogRecord.remove(tid.getId());
@@ -188,6 +190,8 @@ public class LogFile {
         raf.writeInt(COMMIT_RECORD);
         raf.writeLong(tid.getId());
         raf.writeLong(currentOffset);
+//        activeTxns.remove(tid.getId());
+//        undoChain.remove(tid.getId());
         currentOffset = raf.getFilePointer();
         force();
         tidToFirstLogRecord.remove(tid.getId());
@@ -220,6 +224,10 @@ public class LogFile {
         writePageData(raf,before);
         writePageData(raf,after);
         raf.writeLong(currentOffset);
+//        activeTxns.put(tid.getId(), currentOffset);
+//        ArrayList<Long> temp = undoChain.get(tid.getId());
+//        temp.add(currentOffset);
+//        undoChain.put(tid.getId(), temp);
         currentOffset = raf.getFilePointer();
 
         Debug.log("WRITE OFFSET = " + currentOffset);
@@ -318,6 +326,8 @@ public class LogFile {
         raf.writeLong(tid.getId());
         raf.writeLong(currentOffset);
         tidToFirstLogRecord.put(tid.getId(), currentOffset);
+//        activeTxns.put(tid.getId(), currentOffset);
+//        undoChain.put(tid.getId(), new ArrayList<Long>());
         currentOffset = raf.getFilePointer();
 
         Debug.log("BEGIN OFFSET = " + currentOffset);
@@ -580,11 +590,38 @@ public class LogFile {
      * byte after the last transaction */
     private void addCkptTxns() throws IOException {
     	int numTxns = raf.readInt();
+    	long minOffset = Long.MAX_VALUE;
+    	ArrayList<Long> txnList = new ArrayList<Long>();
     	for(int i=0; i<numTxns; i++) {
     		long tid = raf.readLong();
     		long offset = raf.readLong();
     		this.activeTxns.put(tid, offset);
+    		if(minOffset > offset)
+    			minOffset = offset;
+    		txnList.add(tid);
     	}
+    	long savedPoint = raf.getFilePointer();
+    	raf.seek(minOffset);
+    	// Now go to the minOffset, and add all the update transactions into the
+    	// undo chain
+    	int type;
+    	long tid;
+    	long recordStart;
+    	while(raf.getFilePointer() < savedPoint) {
+    		recordStart = raf.getFilePointer();
+    		type = raf.readInt();
+    		tid = raf.readLong();
+    		if(type == UPDATE_RECORD && txnList.contains(tid)) {
+    			if(!undoChain.containsKey(tid))
+    				undoChain.put(tid, new ArrayList<Long>());
+    	        ArrayList<Long> temp = undoChain.get(tid);
+    	        temp.add(recordStart);
+    	        undoChain.put(tid, temp);
+    		}
+    		raf.seek(raf.getFilePointer() + LONG_SIZE);
+    	}
+    	
+    	raf.seek(savedPoint);
     }
     
     // Build up the activeTxns and dirty page tables from log
@@ -595,7 +632,7 @@ public class LogFile {
         if(lastCkpt == 0) {
         	raf.seek(raf.getFilePointer() + LONG_SIZE);
         } else {
-        	raf.seek(raf.getFilePointer() + INT_SIZE + LONG_SIZE);
+        	
         }
         // From the last checkpoint, re-build the tables
         //do switch statement, if ckpt, call addCkptTxns
