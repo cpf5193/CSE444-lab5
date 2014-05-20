@@ -472,7 +472,7 @@ public class LogFile {
         throws NoSuchElementException, IOException {
         synchronized (Database.getBufferPool()) {
             synchronized(this) {
-//            	print();
+            	print();
                 preAppend();
                 // some code goes here
                 long savedOffset = raf.getFilePointer();

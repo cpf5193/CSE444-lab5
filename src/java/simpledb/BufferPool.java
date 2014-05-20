@@ -153,7 +153,17 @@ public class BufferPool {
         // not necessary for lab1|lab2
     	if(commit){
     		// Flush all pages associated with tid to disk
-    		flushPages(tid);
+    		ArrayList<PageId> pages = lockManager.getPagesLockedByTxn(tid);
+        	Page p;
+        	for(PageId pid : pages) {
+        		p = pageMap.get(pid.hashCode());
+        		if(p != null && p.isDirty() != null) {
+        			flushPage(pid);
+        			// use current page contents as the before-image
+        	        // for the next transaction that modifies this page.
+        	        p.setBeforeImage();
+        		}
+        	}
 //    		// save on disk state
 //    		for(PageId pid : lockManager.getPagesLockedByTxn(tid)){
 //    			pageMap.get(pid.hashCode()).setBeforeImage();
@@ -322,7 +332,7 @@ public class BufferPool {
     	Page p;
     	for(PageId pid : pages) {
     		p = pageMap.get(pid.hashCode());
-    		if(p != null && p.isDirty() != null) {
+    		if(p != null) {
     			flushPage(pid);
     			// use current page contents as the before-image
     	        // for the next transaction that modifies this page.
