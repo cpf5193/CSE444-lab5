@@ -82,6 +82,7 @@ public class LogFile {
     static final int UPDATE_RECORD = 3;
     static final int BEGIN_RECORD = 4;
     static final int CHECKPOINT_RECORD = 5;
+    static final int CLR_RECORD = 6;
     static final long NO_CHECKPOINT_ID = -1;
 
     final static int INT_SIZE = 4;
@@ -162,7 +163,7 @@ public class LogFile {
 
                 // must do this here, since rollback only works for
                 // live transactions (needs tidToFirstLogRecord)
-                rollback(tid);
+                rollback(tid.getId());
 
                 raf.writeInt(ABORT_RECORD);
                 raf.writeLong(tid.getId());
@@ -467,7 +468,7 @@ public class LogFile {
 
         @param tid The transaction to rollback
     */
-    public void rollback(TransactionId tid)
+    public void rollback(long tid)
         throws NoSuchElementException, IOException {
         synchronized (Database.getBufferPool()) {
             synchronized(this) {
@@ -476,18 +477,16 @@ public class LogFile {
                 // some code goes here
                 long savedOffset = raf.getFilePointer();
                 raf.seek(raf.length() - LONG_SIZE);
-                System.out.println(raf.getFilePointer());
-                System.out.println(raf.getFilePointer());
                 long recordStart; 
                 int entryType;
-                while(raf.getFilePointer() >= tidToFirstLogRecord.get(tid.getId())) {
+                while(raf.getFilePointer() >= tidToFirstLogRecord.get(tid)) {
                 	// Find start of this LogRecord
                 	recordStart = raf.readLong();
                 	// Go to the start
                 	raf.seek(recordStart);
                 	// Beginning element is the type
                 	entryType = raf.readInt();
-            		if(entryType == UPDATE_RECORD && raf.readLong() == tid.getId()) {
+            		if(entryType == UPDATE_RECORD && raf.readLong() == tid) {
                 		Page beforeImage = readPageData(raf).getBeforeImage();
                 		// Write beforeImage to the local file
                 		System.out.println("in rollback: " + beforeImage.getId());
@@ -533,6 +532,7 @@ public class LogFile {
                 // Search from the back to find the last checkpoint.
                 long lastOffset = findLastCkpt();
                 raf.seek(lastOffset);
+                print();
                 analysis();
                 redo();
                 undo();
@@ -592,12 +592,17 @@ public class LogFile {
     	long savedPoint = raf.getFilePointer();
     	long lastCkpt = findLastCkpt();
         raf.seek(lastCkpt);
+        if(lastCkpt == 0) {
+        	raf.seek(raf.getFilePointer() + INT_SIZE);
+        } else {
+        	raf.seek(raf.getFilePointer() + INT_SIZE + LONG_SIZE);
+        }
         // From the last checkpoint, re-build the tables
-        // Skip over checkpoint's type and tid
-        raf.seek(raf.getFilePointer() + INT_SIZE + LONG_SIZE);
         //do switch statement, if ckpt, call addCkptTxns
         int type;
         long tid;
+        
+        // TODO: reading at wrong indices here somewhere
         while(raf.getFilePointer() < raf.length()) {
         	long recordStart = raf.getFilePointer();
         	type = raf.readInt();
@@ -627,6 +632,9 @@ public class LogFile {
         	case CHECKPOINT_RECORD :
         		addCkptTxns();
         		break;
+        	case CLR_RECORD :
+        		raf.seek(raf.getFilePointer() + LONG_SIZE);
+        		break;
         	}
         }
     	raf.seek(savedPoint);
@@ -634,15 +642,98 @@ public class LogFile {
     
     private void redo() throws IOException {
     	long savedPoint = raf.getFilePointer();
-    	//
+    	// find the first lsn from the dirty page table
+    	long smallestLSN = -1;
+    	for(PageId pid : dirtyPages.keySet()) {
+    		long nextLSN = dirtyPages.get(pid);
+    		if(nextLSN < smallestLSN) {
+    			smallestLSN = nextLSN;
+    		}
+    	}
+    	// We now have the smallest LSN
     	
+    	int type;
+    	long tid;
+    	long recordStart;
+    	while(raf.getFilePointer() < raf.length()) {
+    		recordStart = raf.getFilePointer();
+    		type = raf.readInt();
+    		tid = raf.readLong();
+    		switch(type) {
+    		case BEGIN_RECORD :
+    			tidToFirstLogRecord.put(tid, recordStart);
+    			undoChain.put(tid, new ArrayList<Long>());
+    			break;
+    		case ABORT_RECORD : 
+    			rollback(tid);
+    			activeTxns.remove(tid);
+    			undoChain.remove(tid);
+    			break;
+    		case COMMIT_RECORD :
+    			activeTxns.remove(tid);
+    			undoChain.remove(tid);
+    			break;
+    		case CHECKPOINT_RECORD :
+    			int numTxns = raf.readInt();
+    			// Skip over the txn records
+    			raf.seek(raf.getFilePointer() + (numTxns * 2 * LONG_SIZE));
+    			break;
+    		case UPDATE_RECORD :
+    			Page beforeImage = readPageData(raf);
+    			Page afterImage = readPageData(raf);
+    			int tableId = beforeImage.getId().getTableId();
+    			DbFile file = Database.getCatalog().getDatabaseFile(tableId);
+    			
+    			// Don't have the resources to check pageLSN >= recordStart, but
+    			// writing it over is trivial
+    			if(dirtyPages.containsKey(beforeImage) && 
+    				dirtyPages.get(beforeImage) <= recordStart){
+    				file.writePage(afterImage);
+    			}
+    			
+    			ArrayList<Long> updates = undoChain.get(tid);
+    			updates.add(recordStart);
+    			undoChain.put(tid, updates);
+    			
+    			break;
+    		case CLR_RECORD : 
+    			raf.seek(raf.getFilePointer() + LONG_SIZE);
+    			break;
+    		}
+    		raf.seek(raf.getFilePointer() + LONG_SIZE);
+    	}
     	raf.seek(savedPoint);
     }
     
     private void undo() throws IOException {
     	long savedPoint = raf.getFilePointer();
-    	
-    	
+    	ArrayList<Long> toUndo = new ArrayList<Long>();
+    	toUndo.addAll(activeTxns.values());
+    	Collections.sort(toUndo);
+    	// For each loser transaction
+    	for(int i=toUndo.size()-1; i>=0; i--) {
+    		// For each record in the chain
+    		for(long lsn : undoChain.get(toUndo.get(i))) {
+    			// go to the offset, read the page, and write the old value to disk
+    			raf.seek(lsn + INT_SIZE + LONG_SIZE);
+    			Page beforeImage = readPageData(raf);
+    			Page afterImage = readPageData(raf);
+    			int tableId = afterImage.getId().getTableId();
+    			DbFile file = Database.getCatalog().getDatabaseFile(tableId);
+    			file.writePage(beforeImage);
+    			
+    			// Add a CLR record for the undo
+    			raf.seek(raf.length());
+    			long lastEnd = raf.getFilePointer();
+	    		preAppend();
+	    		raf.writeInt(CLR_RECORD);
+	    		raf.writeLong(toUndo.get(i));
+	    		raf.writeLong(lsn);
+	    		raf.writeLong(lastEnd);
+    		}
+    		undoChain.remove(toUndo.get(i));
+    		
+    	}
     	raf.seek(savedPoint);
     }
     

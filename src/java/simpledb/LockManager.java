@@ -250,7 +250,7 @@ public class LockManager {
 			// tries to add dependency to graph, aborts if there would be a deadlock
 				if(!dependencies.addToGraph(tid, blockers.get(i))) {
 					try {
-						Database.getLogFile().rollback(tid);
+						Database.getLogFile().rollback(tid.getId());
 					} catch (NoSuchElementException | IOException e) {
 						e.printStackTrace();
 					}
@@ -319,7 +319,7 @@ public class LockManager {
 			for(int i=0; i<blockers.size(); i++) {
 				if(!dependencies.addToGraph(tid, blockers.get(i))){
 					try {
-						Database.getLogFile().rollback(tid);
+						Database.getLogFile().rollback(tid.getId());
 					} catch (NoSuchElementException | IOException e) {
 						e.printStackTrace();
 					}
