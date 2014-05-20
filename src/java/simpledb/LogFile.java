@@ -601,8 +601,7 @@ public class LogFile {
         //do switch statement, if ckpt, call addCkptTxns
         int type;
         long tid;
-        
-        // TODO: reading at wrong indices here somewhere
+
         while(raf.getFilePointer() < raf.length()) {
         	long recordStart = raf.getFilePointer();
         	type = raf.readInt();
@@ -699,6 +698,7 @@ public class LogFile {
     			if(dirtyPages.containsKey(beforeImage.getId()) && 
     				dirtyPages.get(beforeImage.getId()) <= recordStart){
     				file.writePage(afterImage);
+    				Database.getBufferPool().insertIntoPageMap(afterImage.getId(), afterImage);
     			}
     			
     			ArrayList<Long> updates = undoChain.get(tid);
@@ -742,6 +742,7 @@ public class LogFile {
     			int tableId = afterImage.getId().getTableId();
     			DbFile file = Database.getCatalog().getDatabaseFile(tableId);
     			file.writePage(beforeImage);
+    			Database.getBufferPool().insertIntoPageMap(beforeImage.getId(), beforeImage);
     			
     			// Add a CLR record for the undo
     			raf.seek(raf.length());
