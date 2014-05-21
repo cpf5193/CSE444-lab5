@@ -89,7 +89,7 @@ public class LogFile {
     final static int LONG_SIZE = 8;
 
     long currentOffset = -1;//protected by this
-//    int pageSize;
+    
     int totalRecords = 0; // for PatchTest //protected by this
 
     HashMap<Long, Long> tidToFirstLogRecord = new HashMap<Long, Long>();
@@ -190,8 +190,6 @@ public class LogFile {
         raf.writeInt(COMMIT_RECORD);
         raf.writeLong(tid.getId());
         raf.writeLong(currentOffset);
-//        activeTxns.remove(tid.getId());
-//        undoChain.remove(tid.getId());
         currentOffset = raf.getFilePointer();
         force();
         tidToFirstLogRecord.remove(tid.getId());
@@ -224,10 +222,6 @@ public class LogFile {
         writePageData(raf,before);
         writePageData(raf,after);
         raf.writeLong(currentOffset);
-//        activeTxns.put(tid.getId(), currentOffset);
-//        ArrayList<Long> temp = undoChain.get(tid.getId());
-//        temp.add(currentOffset);
-//        undoChain.put(tid.getId(), temp);
         currentOffset = raf.getFilePointer();
 
         Debug.log("WRITE OFFSET = " + currentOffset);
@@ -326,8 +320,6 @@ public class LogFile {
         raf.writeLong(tid.getId());
         raf.writeLong(currentOffset);
         tidToFirstLogRecord.put(tid.getId(), currentOffset);
-//        activeTxns.put(tid.getId(), currentOffset);
-//        undoChain.put(tid.getId(), new ArrayList<Long>());
         currentOffset = raf.getFilePointer();
 
         Debug.log("BEGIN OFFSET = " + currentOffset);
@@ -467,7 +459,6 @@ public class LogFile {
         newFile.delete();
 
         currentOffset = raf.getFilePointer();
-        //print();
     }
 
     /** Rollback the specified transaction, setting the state of any
@@ -482,7 +473,6 @@ public class LogFile {
         throws NoSuchElementException, IOException {
         synchronized (Database.getBufferPool()) {
             synchronized(this) {
-            	print();
                 preAppend();
                 // some code goes here
                 long savedOffset = raf.getFilePointer();
@@ -514,7 +504,6 @@ public class LogFile {
                 raf.seek(savedOffset);
             }
         }
-//        print();
     }
 
     /** Shutdown the logging system, writing out whatever state
@@ -562,27 +551,6 @@ public class LogFile {
     	}
     	raf.seek(savedPoint);
     	return offset;
-//    	long offset = 0;
-//    	long savedPoint = raf.getFilePointer();
-//    	raf.seek(raf.length() - LONG_SIZE);
-//    	long recordStart;
-//    	int entryType;
-//    	while(raf.getFilePointer() >= LONG_SIZE) {
-//    		// Find start of this LogRecord
-//        	recordStart = raf.readLong();
-//        	// Go to the start
-//        	raf.seek(recordStart);
-//        	// Beginning element is the type
-//        	entryType = raf.readInt();
-//        	// Skip over the tid
-//        	raf.seek(raf.getFilePointer() + LONG_SIZE);
-//    		if(entryType == CHECKPOINT_RECORD) {
-//    			offset = recordStart;
-//    			raf.seek(0);  // ends loop
-//    		}
-//    	}
-//    	raf.seek(savedPoint);
-//    	return offset;
     }
     
     /* Starting from the numTransactions record, adds all txns
@@ -700,16 +668,6 @@ public class LogFile {
     	if(lastCkpt == 0) {
     		raf.seek(LONG_SIZE);
     	}
-    	
-//    	// find the first lsn from the dirty page table
-//    	long smallestLSN = Long.MAX_VALUE;
-//    	for(PageId pid : dirtyPages.keySet()) {
-//    		long nextLSN = dirtyPages.get(pid);
-//    		if(nextLSN < smallestLSN) {
-//    			smallestLSN = nextLSN;
-//    		}
-//    	}
-    	// We now have the smallest LSN
     	
     	int type;
     	long tid;

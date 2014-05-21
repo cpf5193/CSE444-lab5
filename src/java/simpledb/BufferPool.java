@@ -164,20 +164,14 @@ public class BufferPool {
         	        p.setBeforeImage();
         		}
         	}
-//    		// save on disk state
-//    		for(PageId pid : lockManager.getPagesLockedByTxn(tid)){
-//    			pageMap.get(pid.hashCode()).setBeforeImage();
-//    		}
     	} else {
     		// Since we're implementing Force/No-Steal, we can abort by discarding the
     		// dirty pages and re-reading them from disk
     		int tableId;
 	    	Page newPage;
-//	    	System.out.println("Starting actual abort in transactionComplete for " + tid);
 	    	// Discard all dirty pages
 	    	ArrayList<PageId> pages = lockManager.getPagesLockedByTxn(tid);
 	    	int foundIndex;
-//	    	System.out.println("removing pages in transactionComplete for " + tid);
 	    	for(PageId pid : pages) {
 	    		foundIndex = usedPages.indexOf(pid);
 	    		if(foundIndex > -1) {
@@ -185,12 +179,7 @@ public class BufferPool {
 		    		pageMap.remove(pid.hashCode());
 	    		}
 	    	}
-	    	
-	    	// What happened to the 8 pages that didn't fit in the bufferpool?
-	    	// Apparently they were clean and they were evicted
-	    	// Need to ask what happens when there are 10 pages of tuples inserted but only 2 pages in the bufferpool
-	    	// Reread the pages from disk
-//	    	System.out.println("re-reading pages in transactionComplete for " + tid);
+
 	    	for(PageId pid : pages) {
 	    		try {
 					Database.getBufferPool().getPage(tid, pid, Permissions.READ_WRITE);
@@ -200,41 +189,8 @@ public class BufferPool {
 					e.printStackTrace();
 				}
 	    	}
-	    	// Update dependency graph here??
-	    	
-	    	
-//	    	usedPages.remove();
-//        	pageMap.remove(nextOldestPageId.hashCode());
-	    	
-//	    	ArrayList<PageId> usedPagesCopy = new ArrayList<PageId>(usedPages);
-//	    	for(PageId pid : lockManager.getPagesLockedByTxn(tid)){
-//	    		newPage = pageMap.get(pid.hashCode()).getBeforeImage();
-//	    		pageMap.put(pid.hashCode(), newPage);
-//	    	}
-//	    	
-//    		for(PageId pid : usedPagesCopy) {
-//    			// Evict dirty page
-//    			int pidhash = pid.hashCode();
-//	        	usedPages.remove(usedPages.indexOf(pid));
-//	        	pageMap.remove(pidhash);
-//	        	
-//	        	// Restore the page to its on-disk state
-//	    		tableId = pid.getTableId();
-//		        newPage = ((HeapFile) Database.getCatalog().getDatabaseFile(pid.getTableId()))
-//		        										   .readPage(pid);
-//		        pageMap.put(pidhash, newPage);
-//		        usedPages.add(0, pid);
-//    		}
     	}
-    	// Release all locks that this transaction holds
-//		System.out.println("\nbpdependencies: " + lockManager.dependencies.toString());
-//		System.out.println("bpExclusive Locks: " + lockManager.exclusiveLocks);
-//		System.out.println("bpShared Locks: " + lockManager.sharedLocks);
 		lockManager.releaseAllLocksForTxn(tid);
-//		System.out.println("\nAfter removing locks and dependencies for tid = " + tid + ": ");
-//		System.out.println("bpdependencies: " + lockManager.dependencies.toString());
-//		System.out.println("bpExclusive Locks: " + lockManager.exclusiveLocks);
-//		System.out.println("bpShared Locks: " + lockManager.sharedLocks + "\n");
     }
 
     /**
