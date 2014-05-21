@@ -27,7 +27,3 @@ Changes outside of LogFile:
 As described above, I needed to update the changes that I made in rolling back
 the data in my pageMap structure from BufferPool, which tracks the pages
 in the BufferPool, since it is used in transactionComplete.
-
-Note:
-testFiveThreads and testTenThreads will sometimes fail, caused by a concurrency
-issue from lab 3.

@@ -489,7 +489,6 @@ public class LogFile {
             		if(entryType == UPDATE_RECORD && raf.readLong() == tid) {
                 		Page beforeImage = readPageData(raf).getBeforeImage();
                 		// Write beforeImage to the local file
-                		System.out.println("in rollback: " + beforeImage.getId());
                 		((HeapFile) Database.getCatalog().getDatabaseFile(beforeImage.getId()
                 				.getTableId())).writePage(beforeImage);
                 		Database.getBufferPool().insertIntoPageMap(beforeImage.getId(), beforeImage);
@@ -531,7 +530,6 @@ public class LogFile {
                 // Search from the back to find the last checkpoint.
                 long lastOffset = findLastCkpt();
                 raf.seek(lastOffset);
-                print();
                 analysis();
                 redo();
                 undo();
@@ -725,7 +723,6 @@ public class LogFile {
     
     private synchronized void undo() throws IOException {
     	long savedPoint = raf.getFilePointer();
-    	print();
     	
     	// We'll make a temporary hashMap from max value to tid
     	HashMap<Long, Long> tidMaxes = new HashMap<Long, Long>();
