@@ -589,6 +589,7 @@ public class LogFile {
      * into the active transaction table. File pointer will end at the
      * byte after the last transaction */
     private void addCkptTxns() throws IOException {
+    	long savedPoint = raf.getFilePointer();
     	int numTxns = raf.readInt();
     	long minOffset = Long.MAX_VALUE;
     	ArrayList<Long> txnList = new ArrayList<Long>();
@@ -600,7 +601,6 @@ public class LogFile {
     			minOffset = offset;
     		txnList.add(tid);
     	}
-    	long savedPoint = raf.getFilePointer();
     	raf.seek(minOffset);
     	// Now go to the minOffset, and add all the update transactions into the
     	// undo chain
@@ -611,12 +611,25 @@ public class LogFile {
     		recordStart = raf.getFilePointer();
     		type = raf.readInt();
     		tid = raf.readLong();
-    		if(type == UPDATE_RECORD && txnList.contains(tid)) {
-    			if(!undoChain.containsKey(tid))
-    				undoChain.put(tid, new ArrayList<Long>());
-    	        ArrayList<Long> temp = undoChain.get(tid);
-    	        temp.add(recordStart);
-    	        undoChain.put(tid, temp);
+    		switch(type) {
+    		case UPDATE_RECORD :
+    			if(txnList.contains(tid)){
+    				if(!undoChain.containsKey(tid))
+	    				undoChain.put(tid, new ArrayList<Long>());
+	    	        ArrayList<Long> temp = undoChain.get(tid);
+	    	        temp.add(recordStart);
+	    	        undoChain.put(tid, temp);
+	    	        activeTxns.put(tid, recordStart);
+    			}
+    			readPageData(raf);
+    			readPageData(raf);
+    			break;
+    		case CHECKPOINT_RECORD :
+    			numTxns = raf.readInt();
+    			raf.seek(raf.getFilePointer() + numTxns * LONG_SIZE * 2);
+    			break;
+    		default :
+    			break;
     		}
     		raf.seek(raf.getFilePointer() + LONG_SIZE);
     	}
@@ -752,26 +765,42 @@ public class LogFile {
     	raf.seek(savedPoint);
     }
     
-    private void undo() throws IOException {
+    private synchronized void undo() throws IOException {
     	long savedPoint = raf.getFilePointer();
     	print();
+    	
+    	// We'll make a temporary hashMap from max value to tid
+    	HashMap<Long, Long> tidMaxes = new HashMap<Long, Long>();
+    	for(long tid : undoChain.keySet()) {
+    		long max = Long.MIN_VALUE;
+    		for(long value : undoChain.get(tid)) {
+    			if(max < value)
+    				max = value;
+    		}
+    		tidMaxes.put(max, tid);
+    	}
+    	
+    	// Sort the offsets
+    	ArrayList<Long> maxes = new ArrayList<Long>();
+    	maxes.addAll(tidMaxes.keySet());
+    	Collections.sort(maxes);
+    	
+    	// Create a corresponding list of tids
+    	ArrayList<Long> orderedTids = new ArrayList<Long>();
+    	for(long orderedValue : maxes) {
+    		orderedTids.add(tidMaxes.get(orderedValue));
+    	}
+    	// We now have the order in which to do the undo
     	
     	// Sort the transaction offsets into toUndo
     	ArrayList<Long> toUndo = new ArrayList<Long>();
     	toUndo.addAll(activeTxns.values());
     	Collections.sort(toUndo);
     	
-    	// Create a list of ordered Transactions to go along with the undo offsets
-    	ArrayList<Long> orderedTxns = new ArrayList<Long>(toUndo.size());
-    	for(long txn : activeTxns.keySet()) {
-    		long txnLSN = activeTxns.get(txn);
-    		orderedTxns.add(toUndo.indexOf(txnLSN), txn);
-    	}
-    	
     	// For each loser transaction
     	for(int i=toUndo.size()-1; i>=0; i--) {
     		// For each record in the chain
-    		for(long lsn : undoChain.get(orderedTxns.get(i))) {
+    		for(long lsn : undoChain.get(orderedTids.get(i))) {
     			// go to the offset, read the page, and write the old value to disk
     			raf.seek(lsn + INT_SIZE + LONG_SIZE);
     			Page beforeImage = readPageData(raf);
@@ -790,7 +819,7 @@ public class LogFile {
 	    		raf.writeLong(lsn);
 	    		raf.writeLong(lastEnd);
     		}
-    		undoChain.remove(toUndo.get(i));
+//    		undoChain.remove(orderedTxns.get(i));
     		
     	}
     	raf.seek(savedPoint);
